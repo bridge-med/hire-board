@@ -11,7 +11,7 @@
 --bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;
 --text:#1e293b;--dim:#64748b;
 --primary:#2563eb;--primary-light:#dbeafe;
---pt:#2563eb;--rt:#16a34a;--office:#f59e0b;
+--pt:#2563eb;--nurse:#ec4899;--rt:#16a34a;--office:#f59e0b;
 --stage-screen:#64748b;--stage-1st:#2563eb;--stage-2nd:#7c3aed;
 --stage-offer:#16a34a;--stage-hired:#059669;--stage-reject:#dc2626;
 --sidebar-w:220px;
@@ -52,9 +52,13 @@ body{font-family:system-ui,'Noto Sans JP',sans-serif;background:var(--bg);color:
 /* Badges */
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
 .badge-pt{background:#dbeafe;color:#2563eb}
+.badge-nurse{background:#fce7f3;color:#ec4899}
 .badge-rt{background:#dcfce7;color:#16a34a}
 .badge-office{background:#fef3c7;color:#d97706}
 .badge-stage{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff}
+.badge-employ{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.badge-fulltime{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.badge-parttime{background:#fef3c7;color:#b45309;border:1px solid #fcd34d}
 
 /* Filter bar */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
@@ -178,7 +182,7 @@ body{font-family:system-ui,'Noto Sans JP',sans-serif;background:var(--bg);color:
   </nav>
   <div class="sidebar-footer">
     <div>BRIDGE Product Suite</div>
-    <div style="margin-top:4px">v1.0.0</div>
+    <div style="margin-top:4px">v2.0.0</div>
   </div>
 </aside>
 
@@ -203,7 +207,7 @@ body{font-family:system-ui,'Noto Sans JP',sans-serif;background:var(--bg);color:
 // ============================================================
 // DATA LAYER
 // ============================================================
-const STORAGE_KEY = 'hireboard_data';
+const STORAGE_KEY = 'hireboard_v2';
 
 const DEFAULT_STAGES = [
   {id:'screening',name:'書類選考',color:'#64748b'},
@@ -215,71 +219,98 @@ const DEFAULT_STAGES = [
 ];
 
 const DEFAULT_JOB_TYPES = [
-  {id:'pt',name:'PT',color:'#2563eb',badgeClass:'badge-pt'},
-  {id:'rt',name:'放射線技師',color:'#16a34a',badgeClass:'badge-rt'},
-  {id:'office',name:'事務',color:'#f59e0b',badgeClass:'badge-office'}
+  {id:'pt',name:'PT',fullName:'理学療法士',color:'#2563eb',badgeClass:'badge-pt'},
+  {id:'nurse',name:'看護師',fullName:'看護師',color:'#ec4899',badgeClass:'badge-nurse'},
+  {id:'rt',name:'放射線技師',fullName:'放射線技師',color:'#16a34a',badgeClass:'badge-rt'},
+  {id:'office',name:'事務',fullName:'医療事務',color:'#f59e0b',badgeClass:'badge-office'}
+];
+
+const POSTING_KEYS = [
+  {key:'pt_full',label:'PT常勤',jt:'pt',et:'fulltime'},
+  {key:'pt_part',label:'PT非常勤',jt:'pt',et:'parttime'},
+  {key:'nurse_full',label:'看護師常勤',jt:'nurse',et:'fulltime'},
+  {key:'nurse_part',label:'看護師非常勤',jt:'nurse',et:'parttime'},
+  {key:'rt_full',label:'放技常勤',jt:'rt',et:'fulltime'},
+  {key:'rt_part',label:'放技非常勤',jt:'rt',et:'parttime'},
+  {key:'office_full',label:'事務常勤',jt:'office',et:'fulltime'},
+  {key:'office_part',label:'事務非常勤',jt:'office',et:'parttime'}
 ];
 
 const DEFAULT_AGENCIES = [
-  {id:'a1',name:'コメディカルドットコム',company:'セカンドラボ',type:'posting',feeType:'fixed',feeFixed:{fulltime:220000,parttime:140000},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'inactive'},lastContact:'2026-03-20',notes:'掲載プラン更新済み。担当: 山本さん'},
-  {id:'a2',name:'レバウェル',company:'レバレジーズ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'inactive',rt:'inprogress',office:'inactive'},lastContact:'2026-04-10',notes:'PT常勤の紹介依頼中'},
-  {id:'a3',name:'PTOTSTワーカー',company:'トライトキャリア',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'active',rt:'inactive',office:'inactive'},lastContact:'2026-04-05',notes:'PT非常勤も依頼開始'},
-  {id:'a4',name:'PTOT人材バンク',company:'エス・エム・エス',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',rt:'inactive',office:'inactive'},lastContact:'2026-03-28',notes:''},
-  {id:'a5',name:'ジョブメドレー',company:'メドレー',type:'posting',feeType:'success',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'active'},lastContact:'2026-04-01',notes:'成功報酬型。全職種掲載中'},
-  {id:'a6',name:'マイナビコメディカル',company:'マイナビ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',rt:'active',office:'inactive'},lastContact:'2026-04-08',notes:'放射線技師の紹介に注力中'},
-  {id:'a7',name:'Indeed',company:'Indeed',type:'posting',feeType:'click',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'active'},lastContact:'2026-03-15',notes:'クリック課金型。月額予算5万円'}
+  {id:'a1',name:'コメディカルドットコム',company:'セカンドラボ',type:'posting',feeType:'fixed',feeFixed:{fulltime:220000,parttime:140000},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',nurse_full:'active',nurse_part:'inactive',rt_full:'active',rt_part:'inactive',office_full:'active',office_part:'inactive'},lastContact:'2026-03-20',notes:'掲載プラン更新済み。担当: 山本さん'},
+  {id:'a2',name:'レバウェル',company:'レバレジーズ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'inactive',nurse_full:'active',nurse_part:'inactive',rt_full:'inprogress',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-04-10',notes:'PT常勤・看護師常勤の紹介依頼中'},
+  {id:'a3',name:'PTOTSTワーカー',company:'トライトキャリア',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'active',nurse_full:'inactive',nurse_part:'inactive',rt_full:'inactive',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-04-05',notes:'PT非常勤も依頼開始'},
+  {id:'a4',name:'PTOT人材バンク',company:'エス・エム・エス',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',nurse_full:'inactive',nurse_part:'inactive',rt_full:'inactive',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-03-28',notes:''},
+  {id:'a5',name:'ジョブメドレー',company:'メドレー',type:'posting',feeType:'success',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',nurse_full:'active',nurse_part:'active',rt_full:'active',rt_part:'active',office_full:'active',office_part:'active'},lastContact:'2026-04-01',notes:'成功報酬型。全職種掲載中'},
+  {id:'a6',name:'マイナビコメディカル',company:'マイナビ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',nurse_full:'active',nurse_part:'inactive',rt_full:'active',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-04-08',notes:'放射線技師の紹介に注力中'},
+  {id:'a7',name:'Indeed',company:'Indeed',type:'posting',feeType:'click',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',nurse_full:'active',nurse_part:'active',rt_full:'active',rt_part:'active',office_full:'active',office_part:'active'},lastContact:'2026-03-15',notes:'クリック課金型。月額予算5万円'},
+  {id:'a8',name:'ナース人材バンク',company:'エス・エム・エス',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'inactive',pt_part:'inactive',nurse_full:'active',nurse_part:'active',rt_full:'inactive',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-04-12',notes:'看護師専門。常勤・非常勤ともに紹介依頼中'},
+  {id:'a9',name:'看護roo!',company:'クイック',type:'posting',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:400000,postings:{pt_full:'inactive',pt_part:'inactive',nurse_full:'active',nurse_part:'active',rt_full:'inactive',rt_part:'inactive',office_full:'inactive',office_part:'inactive'},lastContact:'2026-04-11',notes:'看護師専門。掲載+エージェント併用型'}
 ];
 
 const DEFAULT_CANDIDATES = [
+  // PT (5)
   {id:'c1',name:'伊藤 健太',jobType:'pt',expYears:14,agencyId:'a2',stage:'hired',salary:5200000,employType:'fulltime',firstContact:'2025-11-15',lastAction:'2026-02-01',stageDate:'2026-02-01',assignee:'院長',notes:'2月入職済み。即戦力として活躍中。',phone:'090-1234-5678',email:'ito@example.com'},
   {id:'c2',name:'佐藤 美咲',jobType:'pt',expYears:6,agencyId:'a3',stage:'interview2',salary:4200000,employType:'fulltime',firstContact:'2026-03-01',lastAction:'2026-04-12',stageDate:'2026-04-10',assignee:'院長',notes:'見学日程調整中。4/18候補。',phone:'090-2345-6789',email:''},
   {id:'c3',name:'田中 翔太',jobType:'pt',expYears:3,agencyId:'a1',stage:'screening',salary:3600000,employType:'fulltime',firstContact:'2026-04-10',lastAction:'2026-04-10',stageDate:'2026-04-10',assignee:'事務長',notes:'新卒3年目。回復期リハ経験あり。',phone:'',email:''},
   {id:'c4',name:'山田 花子',jobType:'pt',expYears:8,agencyId:'a5',stage:'interview1',salary:4500000,employType:'fulltime',firstContact:'2026-03-20',lastAction:'2026-04-08',stageDate:'2026-04-05',assignee:'院長',notes:'整形外科クリニック勤務。一次面接4/15予定。',phone:'080-3456-7890',email:''},
-  {id:'c5',name:'鈴木 大輔',jobType:'pt',expYears:1,agencyId:'a5',stage:'rejected',salary:3400000,employType:'parttime',firstContact:'2026-02-10',lastAction:'2026-03-15',stageDate:'2026-03-15',assignee:'院長',notes:'非常勤希望。勤務日数が合わず見送り。',phone:'',email:''},
+  {id:'c5',name:'鈴木 大輔',jobType:'pt',expYears:1,agencyId:'a5',stage:'rejected',salary:0,employType:'parttime',firstContact:'2026-02-10',lastAction:'2026-03-15',stageDate:'2026-03-15',assignee:'院長',notes:'非常勤希望。勤務日数が合わず見送り。',phone:'',email:''},
+
+  // 看護師 (4)
+  {id:'c13',name:'木村 理恵',jobType:'nurse',expYears:12,agencyId:'a8',stage:'interview2',salary:4000000,employType:'fulltime',firstContact:'2026-03-10',lastAction:'2026-04-14',stageDate:'2026-04-12',assignee:'院長',notes:'総合病院外来経験豊富。見学希望あり。4/19候補。',phone:'090-8901-2345',email:'kimura@example.com'},
+  {id:'c14',name:'森田 さくら',jobType:'nurse',expYears:5,agencyId:'a9',stage:'screening',salary:3600000,employType:'fulltime',firstContact:'2026-04-08',lastAction:'2026-04-08',stageDate:'2026-04-08',assignee:'事務長',notes:'整形外科クリニック経験あり。書類確認中。',phone:'080-9012-3456',email:''},
+  {id:'c15',name:'石井 美穂',jobType:'nurse',expYears:8,agencyId:'a5',stage:'offer',salary:3900000,employType:'fulltime',firstContact:'2026-02-25',lastAction:'2026-04-13',stageDate:'2026-04-11',assignee:'院長',notes:'内定通知済み。4/18回答期限。外来・処置室経験あり。',phone:'090-0123-4567',email:'ishii@example.com'},
+  {id:'c16',name:'藤井 恵子',jobType:'nurse',expYears:3,agencyId:'a8',stage:'interview1',salary:0,employType:'parttime',firstContact:'2026-04-01',lastAction:'2026-04-10',stageDate:'2026-04-08',assignee:'事務長',notes:'週3日希望。子育て中のため午前のみ希望。一次面接済み。',phone:'070-1234-5678',email:''},
+
+  // 放射線技師 (3)
   {id:'c6',name:'高橋 裕子',jobType:'rt',expYears:10,agencyId:'a6',stage:'offer',salary:4800000,employType:'fulltime',firstContact:'2026-03-05',lastAction:'2026-04-14',stageDate:'2026-04-12',assignee:'院長',notes:'内定承諾待ち。4/20回答期限。',phone:'090-4567-8901',email:'takahashi@example.com'},
   {id:'c7',name:'渡辺 誠',jobType:'rt',expYears:5,agencyId:'a2',stage:'interview1',salary:4000000,employType:'fulltime',firstContact:'2026-04-01',lastAction:'2026-04-11',stageDate:'2026-04-08',assignee:'事務長',notes:'総合病院からの転職希望。一次面接済み、結果連絡待ち。',phone:'',email:''},
-  {id:'c8',name:'中村 あゆみ',jobType:'rt',expYears:2,agencyId:'a1',stage:'screening',salary:3500000,employType:'fulltime',firstContact:'2026-04-13',lastAction:'2026-04-13',stageDate:'2026-04-13',assignee:'事務長',notes:'書類確認中。CT経験あり。',phone:'',email:''},
+  {id:'c8',name:'中村 あゆみ',jobType:'rt',expYears:2,agencyId:'a1',stage:'screening',salary:3500000,employType:'parttime',firstContact:'2026-04-13',lastAction:'2026-04-13',stageDate:'2026-04-13',assignee:'事務長',notes:'非常勤希望。CT経験あり。週2〜3日勤務希望。',phone:'',email:''},
+
+  // 事務 (4)
   {id:'c9',name:'小林 真理',jobType:'office',expYears:7,agencyId:'a5',stage:'interview2',salary:3200000,employType:'fulltime',firstContact:'2026-03-10',lastAction:'2026-04-10',stageDate:'2026-04-08',assignee:'事務長',notes:'医療事務経験豊富。見学後に二次面接予定。',phone:'080-5678-9012',email:''},
   {id:'c10',name:'加藤 優',jobType:'office',expYears:0,agencyId:'a7',stage:'screening',salary:2800000,employType:'fulltime',firstContact:'2026-04-12',lastAction:'2026-04-12',stageDate:'2026-04-12',assignee:'事務長',notes:'未経験。医療事務資格取得予定。',phone:'',email:''},
-  {id:'c11',name:'松本 恵',jobType:'office',expYears:3,agencyId:'a5',stage:'interview1',salary:3000000,employType:'parttime',firstContact:'2026-03-25',lastAction:'2026-04-09',stageDate:'2026-04-05',assignee:'事務長',notes:'週3希望。レセプト経験あり。',phone:'070-6789-0123',email:''},
+  {id:'c11',name:'松本 恵',jobType:'office',expYears:3,agencyId:'a5',stage:'interview1',salary:0,employType:'parttime',firstContact:'2026-03-25',lastAction:'2026-04-09',stageDate:'2026-04-05',assignee:'事務長',notes:'週3希望。レセプト経験あり。時給1,200円希望。',phone:'070-6789-0123',email:''},
   {id:'c12',name:'吉田 拓也',jobType:'office',expYears:5,agencyId:'a1',stage:'offer',salary:3400000,employType:'fulltime',firstContact:'2026-02-20',lastAction:'2026-04-14',stageDate:'2026-04-13',assignee:'院長',notes:'医事課リーダー経験あり。内定通知済み。',phone:'090-7890-1234',email:'yoshida@example.com'}
 ];
 
 const DEFAULT_TEMPLATES = [
-  {id:'t1',title:'常勤PT スカウトメッセージ',content:`【常勤PT募集のご案内】
+  {id:'t1',title:'PT常勤 スカウトメッセージ',content:`【常勤 理学療法士募集のご案内】ふじなみ整形外科
 
-はじめまして。○○クリニック 採用担当の△△と申します。
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
 
 この度、貴殿のご経歴を拝見し、ぜひ当院の理学療法士（常勤）としてお力をお借りできればと思い、ご連絡いたしました。
 
 ■ 募集概要
 ・職種：理学療法士（常勤）
-・勤務地：○○クリニック（最寄駅：○○駅 徒歩5分）
+・勤務地：ふじなみ整形外科（愛知県一宮市／最寄駅 名鉄一宮駅 車10分）
 ・診療科：整形外科・リハビリテーション科
-・給与：月給28万〜40万（経験・能力に応じて優遇）
+・年収：380万〜450万円（経験・能力に応じて優遇）
 ・勤務時間：8:30〜17:30（残業月10時間程度）
 ・休日：日祝＋平日1日（週休2日制）
+・賞与：年2回（計3.5ヶ月分）
 
 ■ 当院の特徴
 ・外来リハビリ中心で1日あたり18〜20単位
-・運動器リハに特化した最新設備を完備
+・運動器リハに特化した最新設備を完備（超音波エコー、体外衝撃波等）
 ・スタッフ間の雰囲気が良く、離職率が低い職場です
-・研修制度・資格取得支援あり
+・研修制度・学会参加費補助・資格取得支援あり
+・整形外科専門医のもとで高度な運動器リハを学べます
 
 まずはカジュアルな見学からでも構いません。
 ご興味をお持ちいただけましたら、お気軽にご返信ください。
 
 何卒よろしくお願いいたします。`},
-  {id:'t2',title:'非常勤PT スカウトメッセージ',content:`【非常勤PT募集のご案内】
+  {id:'t2',title:'PT非常勤 スカウトメッセージ',content:`【非常勤 理学療法士募集のご案内】ふじなみ整形外科
 
-はじめまして。○○クリニック 採用担当の△△と申します。
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
 
 非常勤の理学療法士を募集しており、ぜひご検討いただきたくご連絡いたしました。
 
 ■ 募集概要
 ・職種：理学療法士（非常勤・パート）
-・勤務地：○○クリニック
-・時給：1,800円〜2,500円（経験考慮）
+・勤務地：ふじなみ整形外科（愛知県一宮市）
+・時給：1,600円〜2,200円（経験考慮）
 ・勤務日数：週2〜4日で応相談
 ・勤務時間：9:00〜17:00の間で応相談
 
@@ -288,43 +319,208 @@ const DEFAULT_TEMPLATES = [
 ・勤務日数・時間の柔軟な調整が可能
 ・外来整形リハ中心で体力的な負担が少ない
 ・ブランクのある方も歓迎
+・車通勤OK、駐車場完備
 
 ご都合の良い曜日・時間帯をお知らせいただければ、
 調整のうえご見学のご案内をいたします。
 
+ライフスタイルに合わせた働き方をご提案しますので、
 お気軽にご連絡ください。`},
-  {id:'t3',title:'求人掲載テンプレート（PT）',content:`【理学療法士募集（常勤・非常勤）】
+  {id:'t3',title:'看護師常勤 スカウトメッセージ',content:`【常勤 看護師募集のご案内】ふじなみ整形外科
 
-○○クリニックでは、理学療法士を募集しています。
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
 
-【施設概要】
-・診療科目：整形外科、リハビリテーション科
-・リハスタッフ：PT○名、OT○名
-・1日の患者数：外来○名、リハ○名
+この度、貴殿のご経歴を拝見し、ぜひ当院の看護師（常勤）としてご活躍いただきたくご連絡いたしました。
 
-【募集要項】
-・資格：理学療法士免許
-・経験：不問（経験者優遇）
-・雇用形態：常勤 / 非常勤
+■ 募集概要
+・職種：看護師（常勤）
+・勤務地：ふじなみ整形外科（愛知県一宮市／最寄駅 名鉄一宮駅 車10分）
+・診療科：整形外科・リハビリテーション科
+・年収：350万〜420万円（経験・能力に応じて優遇）
+・勤務時間：8:30〜18:00（午前・午後診）
+・休日：日祝＋平日半日（木曜午後休）、週休2日制
+・賞与：年2回（計3.0ヶ月分）
 
-【待遇・福利厚生】
-・昇給年1回、賞与年2回
-・社会保険完備
-・交通費支給（上限月3万円）
-・制服貸与
-・研修費補助制度あり`},
-  {id:'t4',title:'紹介会社オンボーディングチェックリスト',content:`【新規紹介会社 契約・運用開始チェックリスト】
+■ 当院の特徴
+・日勤のみ！夜勤なしで安定した生活リズム
+・外来診療補助・処置業務が中心
+・整形外科専門のため急性期対応が少なく、落ち着いた環境
+・少人数体制で一人ひとりの裁量が大きい職場
+・研修制度あり、ブランク復帰の方も丁寧にサポート
+
+病棟勤務からの転職をお考えの方にもぴったりの環境です。
+まずは見学からでもお気軽にご連絡ください。
+
+何卒よろしくお願いいたします。`},
+  {id:'t4',title:'看護師非常勤 スカウトメッセージ',content:`【非常勤 看護師募集のご案内】ふじなみ整形外科
+
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
+
+非常勤の看護師を募集しており、ぜひご検討いただきたくご連絡いたしました。
+
+■ 募集概要
+・職種：看護師（非常勤・パート）
+・勤務地：ふじなみ整形外科（愛知県一宮市）
+・時給：1,800円〜2,400円（経験考慮）
+・勤務日数：週2〜4日で応相談
+・勤務時間：午前のみ / 午後のみ / フルタイムいずれも可
+
+■ おすすめポイント
+・日勤のみ、夜勤なし
+・午前のみ・午後のみなど柔軟なシフト対応
+・お子様の行事に合わせた休み取得も可能
+・整形外科外来が中心で業務負担が少ない
+・車通勤OK、駐車場完備
+
+子育て中の方や、病棟勤務からワークライフバランスを
+見直したい方に多くお選びいただいております。
+
+ご希望の曜日・時間帯をお聞かせください。
+お気軽にご連絡をお待ちしております。`},
+  {id:'t5',title:'放射線技師常勤 スカウトメッセージ',content:`【常勤 診療放射線技師募集のご案内】ふじなみ整形外科
+
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
+
+この度、貴殿のご経歴を拝見し、当院の診療放射線技師（常勤）としてお力をお借りできればと思い、ご連絡いたしました。
+
+■ 募集概要
+・職種：診療放射線技師（常勤）
+・勤務地：ふじなみ整形外科（愛知県一宮市／最寄駅 名鉄一宮駅 車10分）
+・年収：380万〜450万円（経験・能力に応じて優遇）
+・勤務時間：8:30〜17:30
+・休日：日祝＋平日1日（週休2日制）
+・賞与：年2回（計3.5ヶ月分）
+
+■ 当院の特徴
+・一般撮影、CT、MRI、骨密度測定など幅広い撮影業務
+・最新鋭の画像診断装置を導入済み
+・整形外科専門のため撮影部位が明確で専門性を高められる
+・医師との距離が近く、読影補助のスキルも向上
+・残業が少なく、ワークライフバランスを保てる環境
+
+総合病院とは異なり、整形外科領域に特化した撮影技術を
+深めたい方には最適な環境です。
+
+まずは見学からでもお気軽にどうぞ。
+ご連絡をお待ちしております。`},
+  {id:'t6',title:'放射線技師非常勤 スカウトメッセージ',content:`【非常勤 診療放射線技師募集のご案内】ふじなみ整形外科
+
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
+
+非常勤の診療放射線技師を募集しており、ご検討いただきたくご連絡いたしました。
+
+■ 募集概要
+・職種：診療放射線技師（非常勤・パート）
+・勤務地：ふじなみ整形外科（愛知県一宮市）
+・時給：1,700円〜2,300円（経験考慮）
+・勤務日数：週2〜3日で応相談
+・勤務時間：8:30〜17:30の間で応相談
+
+■ おすすめポイント
+・ダブルワーク歓迎
+・整形外科に特化した撮影業務で専門スキル維持
+・一般撮影・CT中心の業務
+・勤務日・時間の柔軟な調整が可能
+・車通勤OK、駐車場完備
+
+現職と並行して技術を活かしたい方や、
+フルタイム勤務が難しい方にもおすすめです。
+
+ご希望の曜日・時間帯をお聞かせください。
+お気軽にご連絡ください。`},
+  {id:'t7',title:'事務常勤 スカウトメッセージ',content:`【常勤 医療事務募集のご案内】ふじなみ整形外科
+
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
+
+この度、貴殿のご経歴を拝見し、当院の医療事務スタッフ（常勤）としてご活躍いただきたくご連絡いたしました。
+
+■ 募集概要
+・職種：医療事務（常勤）
+・勤務地：ふじなみ整形外科（愛知県一宮市／最寄駅 名鉄一宮駅 車10分）
+・年収：280万〜350万円（経験・能力に応じて優遇）
+・勤務時間：8:30〜18:00（午前・午後診）
+・休日：日祝＋平日半日（木曜午後休）
+・賞与：年2回（計2.5ヶ月分）
+
+■ 当院の特徴
+・受付・会計・レセプト業務を中心とした医療事務全般
+・電子カルテ導入済みで業務効率が高い
+・少人数チームで幅広い業務を経験できる
+・整形外科専門のため算定パターンが明確で覚えやすい
+・社会保険完備、交通費支給、制服貸与
+・未経験でも丁寧に指導する体制あり
+
+医療事務の経験を活かしてキャリアアップしたい方、
+ぜひ一度見学にお越しください。
+
+ご連絡をお待ちしております。`},
+  {id:'t8',title:'事務非常勤 スカウトメッセージ',content:`【非常勤 医療事務募集のご案内】ふじなみ整形外科
+
+はじめまして。ふじなみ整形外科（愛知県一宮市）採用担当と申します。
+
+非常勤の医療事務スタッフを募集しており、ぜひご検討いただきたくご連絡いたしました。
+
+■ 募集概要
+・職種：医療事務（非常勤・パート）
+・勤務地：ふじなみ整形外科（愛知県一宮市）
+・時給：1,100円〜1,400円（経験考慮）
+・勤務日数：週3〜4日で応相談
+・勤務時間：午前のみ（8:30〜12:30）/ 午後のみ（15:00〜18:00）/ フルタイムいずれも可
+
+■ おすすめポイント
+・午前のみ・午後のみの短時間勤務OK
+・扶養内勤務も対応可能
+・お子様の学校行事等に合わせた休み調整が柔軟
+・整形外科の算定に特化しているため覚えやすい
+・車通勤OK、駐車場完備
+・未経験・ブランクありの方も丁寧に指導
+
+ご家庭と両立しながら働きたい方にぴったりの環境です。
+
+ご希望の曜日・時間帯をお聞かせください。
+お気軽にご連絡をお待ちしております。`},
+  {id:'t9',title:'新規紹介会社 対応チェックリスト',content:`【新規紹介会社 契約・運用開始チェックリスト】
 
 □ 基本契約書の締結
-□ 手数料率・返金規定の確認
+□ 手数料率・返金規定の確認（常勤・非常勤それぞれ）
 □ 担当者連絡先の登録
-□ 求人票の送付（職種ごと）
+□ 求人票の送付（PT/看護師/放射線技師/事務 × 常勤/非常勤）
 □ クリニック概要資料の共有
 □ 見学対応可能日の連絡
-□ 面接フローの説明
-□ 候補者紹介時の連絡方法の確認
-□ HireBoardへの登録
-□ 初回ミーティングの実施`}
+□ 面接フローの説明（書類選考→一次面接→見学・二次面接→内定）
+□ 候補者紹介時の連絡方法の確認（メール/電話/専用システム）
+□ HireBoardへの登録（紹介会社管理画面で追加）
+□ 掲載ステータスの設定（職種×雇用形態ごと）
+□ 初回ミーティングの実施
+□ 紹介実績の確認スケジュール設定（月次）`},
+  {id:'t10',title:'求人掲載テンプレート（汎用）',content:`【スタッフ募集】ふじなみ整形外科（愛知県一宮市）
+
+ふじなみ整形外科では、以下のスタッフを募集しています。
+
+【施設概要】
+・施設名：ふじなみ整形外科
+・所在地：愛知県一宮市（名鉄一宮駅より車10分）
+・診療科目：整形外科、リハビリテーション科
+・スタッフ構成：医師1名、看護師○名、PT○名、放射線技師○名、事務○名
+・1日の患者数：外来約○名
+
+【募集職種】（該当職種を選択）
+□ 理学療法士（常勤：年収380〜450万円 / 非常勤：時給1,600〜2,200円）
+□ 看護師（常勤：年収350〜420万円 / 非常勤：時給1,800〜2,400円）
+□ 診療放射線技師（常勤：年収380〜450万円 / 非常勤：時給1,700〜2,300円）
+□ 医療事務（常勤：年収280〜350万円 / 非常勤：時給1,100〜1,400円）
+
+【共通待遇・福利厚生】
+・昇給年1回、賞与年2回（常勤のみ）
+・社会保険完備（常勤のみ）
+・交通費支給（上限月3万円）
+・車通勤OK、駐車場完備
+・制服貸与
+・研修費補助制度あり
+
+【応募方法】
+お電話またはメールにてお気軽にお問い合わせください。
+見学のみのご希望も歓迎いたします。`}
 ];
 
 function getDefaultData(){
@@ -367,9 +563,9 @@ function daysBetween(d1,d2){
 }
 
 function formatYen(n){
-  if(!n||n===0)return '¥0';
-  if(n>=10000)return '¥'+Math.round(n/10000)+'万';
-  return '¥'+n.toLocaleString();
+  if(!n||n===0)return '\u00a50';
+  if(n>=10000)return '\u00a5'+Math.round(n/10000)+'\u4e07';
+  return '\u00a5'+n.toLocaleString();
 }
 
 function calcFee(candidate){
@@ -379,10 +575,16 @@ function calcFee(candidate){
     return candidate.employType==='parttime'?agency.feeFixed.parttime:agency.feeFixed.fulltime;
   }
   if(agency.feeType==='percent'){
-    const fee=Math.round((candidate.salary||0)*(agency.feePercent/100));
-    return agency.feeMin?Math.max(fee,agency.feeMin):fee;
+    const sal=candidate.salary||0;
+    if(sal===0)return 0;
+    const fee=Math.round(sal*(agency.feePercent/100));
+    const minFee=candidate.employType==='parttime'?(agency.feeMin?Math.min(agency.feeMin,400000):0):agency.feeMin;
+    return minFee?Math.max(fee,minFee):fee;
   }
-  if(agency.feeType==='success')return Math.round((candidate.salary||0)*0.2);
+  if(agency.feeType==='success'){
+    const sal=candidate.salary||0;
+    return Math.round(sal*0.2);
+  }
   return 0;
 }
 
@@ -399,6 +601,11 @@ function jobBadge(jtId){
   return `<span class="badge ${jt.badgeClass}">${jt.name}</span>`;
 }
 
+function employBadge(et){
+  if(et==='parttime') return `<span class="badge-employ badge-parttime">\u975E\u5E38\u52E4</span>`;
+  return `<span class="badge-employ badge-fulltime">\u5E38\u52E4</span>`;
+}
+
 function stageBadge(stId){
   const st=getStage(stId);
   if(!st)return '';
@@ -410,13 +617,14 @@ function stageBadge(stId){
 // ============================================================
 let currentPage='pipeline';
 let currentFilter='all';
+let currentEmployFilter='all';
 
 function showPage(page){
   currentPage=page;
   document.querySelectorAll('.sidebar nav a').forEach(a=>{
     a.classList.toggle('active',a.dataset.page===page);
   });
-  const titles={pipeline:'パイプライン',candidates:'候補者一覧',agencies:'紹介会社管理',costs:'コスト分析',templates:'テンプレート',settings:'設定'};
+  const titles={pipeline:'\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3',candidates:'\u5019\u88DC\u8005\u4E00\u89A7',agencies:'\u7D39\u4ECB\u4F1A\u793E\u7BA1\u7406',costs:'\u30B3\u30B9\u30C8\u5206\u6790',templates:'\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8',settings:'\u8A2D\u5B9A'};
   document.getElementById('pageTitle').textContent=titles[page]||page;
   document.getElementById('sidebar').classList.remove('open');
   render();
@@ -437,20 +645,40 @@ function render(){
 }
 
 // ============================================================
-// 1. PIPELINE
+// FILTER HELPERS
 // ============================================================
-function renderPipeline(container,topbar){
-  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ 候補者を追加</button>`;
+function filterCandidates(){
+  let list=data.candidates;
+  if(currentFilter!=='all') list=list.filter(c=>c.jobType===currentFilter);
+  if(currentEmployFilter!=='all') list=list.filter(c=>c.employType===currentEmployFilter);
+  return list;
+}
 
-  const filtered=currentFilter==='all'?data.candidates:data.candidates.filter(c=>c.jobType===currentFilter);
-
+function renderFilterBar(){
   let html=`<div class="filter-bar">
-    <span style="font-size:12px;color:var(--dim);margin-right:4px">職種:</span>
-    <button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="currentFilter='all';render()">全職種</button>`;
+    <span style="font-size:12px;color:var(--dim);margin-right:4px">\u8077\u7A2E:</span>
+    <button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="currentFilter='all';render()">\u5168\u8077\u7A2E</button>`;
   data.jobTypes.forEach(jt=>{
     html+=`<button class="filter-btn ${currentFilter===jt.id?'active':''}" onclick="currentFilter='${jt.id}';render()">${jt.name}</button>`;
   });
-  html+=`</div><div class="kanban">`;
+  html+=`<span style="font-size:12px;color:var(--dim);margin-left:12px;margin-right:4px">\u96C7\u7528:</span>
+    <button class="filter-btn ${currentEmployFilter==='all'?'active':''}" onclick="currentEmployFilter='all';render()">\u5168\u3066</button>
+    <button class="filter-btn ${currentEmployFilter==='fulltime'?'active':''}" onclick="currentEmployFilter='fulltime';render()">\u5E38\u52E4</button>
+    <button class="filter-btn ${currentEmployFilter==='parttime'?'active':''}" onclick="currentEmployFilter='parttime';render()">\u975E\u5E38\u52E4</button>
+  </div>`;
+  return html;
+}
+
+// ============================================================
+// 1. PIPELINE
+// ============================================================
+function renderPipeline(container,topbar){
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ \u5019\u88DC\u8005\u3092\u8FFD\u52A0</button>`;
+
+  const filtered=filterCandidates();
+
+  let html=renderFilterBar();
+  html+=`<div class="kanban">`;
 
   data.stages.forEach(st=>{
     const cards=filtered.filter(c=>c.stage===st.id);
@@ -464,16 +692,17 @@ function renderPipeline(container,topbar){
       const days=daysBetween(c.stageDate);
       const fee=calcFee(c);
       html+=`<div class="kanban-card" onclick="openCandidateDetail('${c.id}')">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px">
           ${jobBadge(c.jobType)}
+          ${employBadge(c.employType)}
           <span class="card-name">${c.name}</span>
         </div>
         <div class="card-meta">
-          <span>${agency?agency.name:'直接応募'}</span>
-          <span>経験${c.expYears}年</span>
+          <span>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</span>
+          <span>\u7D4C\u9A13${c.expYears}\u5E74</span>
         </div>
-        ${fee?`<div class="card-fee">紹介料: ${formatYen(fee)}</div>`:''}
-        <div class="card-days">${st.id==='hired'?'入職済み':st.id==='rejected'?'見送り':days+'日経過'}</div>
+        ${fee?`<div class="card-fee">\u7D39\u4ECB\u6599: ${formatYen(fee)}</div>`:''}
+        <div class="card-days">${st.id==='hired'?'\u5165\u8077\u6E08\u307F':st.id==='rejected'?'\u898B\u9001\u308A':days+'\u65E5\u7D4C\u904E'}</div>
       </div>`;
     });
     html+=`</div></div>`;
@@ -488,28 +717,31 @@ function renderPipeline(container,topbar){
 let candidateSort={col:'lastAction',asc:false};
 
 function renderCandidates(container,topbar){
-  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ 候補者を追加</button>`;
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ \u5019\u88DC\u8005\u3092\u8FFD\u52A0</button>`;
 
-  const sorted=[...data.candidates].sort((a,b)=>{
+  const filtered=filterCandidates();
+  const sorted=[...filtered].sort((a,b)=>{
     let va=a[candidateSort.col],vb=b[candidateSort.col];
     if(typeof va==='number'&&typeof vb==='number')return candidateSort.asc?va-vb:vb-va;
     va=String(va||'');vb=String(vb||'');
     return candidateSort.asc?va.localeCompare(vb):vb.localeCompare(va);
   });
 
-  function sortIcon(col){return candidateSort.col===col?(candidateSort.asc?' ↑':' ↓'):'';}
+  function sortIcon(col){return candidateSort.col===col?(candidateSort.asc?' \u2191':' \u2193'):'';}
 
-  let html=`<div style="overflow-x:auto"><table class="data-table">
+  let html=renderFilterBar();
+  html+=`<div style="overflow-x:auto"><table class="data-table">
     <thead><tr>
-      <th onclick="toggleCandidateSort('name')">氏名${sortIcon('name')}</th>
-      <th onclick="toggleCandidateSort('jobType')">職種${sortIcon('jobType')}</th>
-      <th onclick="toggleCandidateSort('expYears')">経験年数${sortIcon('expYears')}</th>
-      <th onclick="toggleCandidateSort('agencyId')">紹介元${sortIcon('agencyId')}</th>
-      <th onclick="toggleCandidateSort('stage')">ステータス${sortIcon('stage')}</th>
-      <th onclick="toggleCandidateSort('firstContact')">初回接触${sortIcon('firstContact')}</th>
-      <th onclick="toggleCandidateSort('lastAction')">最終更新${sortIcon('lastAction')}</th>
-      <th onclick="toggleCandidateSort('assignee')">担当${sortIcon('assignee')}</th>
-      <th>紹介料</th>
+      <th onclick="toggleCandidateSort('name')">\u6C0F\u540D${sortIcon('name')}</th>
+      <th onclick="toggleCandidateSort('jobType')">\u8077\u7A2E${sortIcon('jobType')}</th>
+      <th onclick="toggleCandidateSort('employType')">\u96C7\u7528${sortIcon('employType')}</th>
+      <th onclick="toggleCandidateSort('expYears')">\u7D4C\u9A13\u5E74\u6570${sortIcon('expYears')}</th>
+      <th onclick="toggleCandidateSort('agencyId')">\u7D39\u4ECB\u5143${sortIcon('agencyId')}</th>
+      <th onclick="toggleCandidateSort('stage')">\u30B9\u30C6\u30FC\u30BF\u30B9${sortIcon('stage')}</th>
+      <th onclick="toggleCandidateSort('firstContact')">\u521D\u56DE\u63A5\u89E6${sortIcon('firstContact')}</th>
+      <th onclick="toggleCandidateSort('lastAction')">\u6700\u7D42\u66F4\u65B0${sortIcon('lastAction')}</th>
+      <th onclick="toggleCandidateSort('assignee')">\u62C5\u5F53${sortIcon('assignee')}</th>
+      <th>\u7D39\u4ECB\u6599</th>
     </tr></thead><tbody>`;
 
   sorted.forEach(c=>{
@@ -517,8 +749,9 @@ function renderCandidates(container,topbar){
     html+=`<tr onclick="openCandidateDetail('${c.id}')">
       <td style="font-weight:600">${c.name}</td>
       <td>${jobBadge(c.jobType)}</td>
-      <td>${c.expYears}年</td>
-      <td>${agency?agency.name:'直接応募'}</td>
+      <td>${employBadge(c.employType)}</td>
+      <td>${c.expYears}\u5E74</td>
+      <td>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</td>
       <td>${stageBadge(c.stage)}</td>
       <td>${c.firstContact||'-'}</td>
       <td>${c.lastAction||'-'}</td>
@@ -540,33 +773,35 @@ function toggleCandidateSort(col){
 // 3. AGENCIES
 // ============================================================
 function renderAgencies(container,topbar){
-  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddAgency()">+ 紹介会社を追加</button>`;
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddAgency()">+ \u7D39\u4ECB\u4F1A\u793E\u3092\u8FFD\u52A0</button>`;
 
-  const postingLabel={active:'掲載中',inactive:'未掲載',inprogress:'対応中'};
+  const postingLabel={active:'\u63B2\u8F09\u4E2D',inactive:'\u672A\u63B2\u8F09',inprogress:'\u5BFE\u5FDC\u4E2D'};
   const postingClass={active:'active',inactive:'inactive',inprogress:'inprogress'};
-  const typeLabel={posting:'求人掲載型',agent:'エージェント型'};
+  const typeLabel={posting:'\u6C42\u4EBA\u63B2\u8F09\u578B',agent:'\u30A8\u30FC\u30B8\u30A7\u30F3\u30C8\u578B'};
 
   let html=`<div style="overflow-x:auto"><table class="data-table">
     <thead><tr>
-      <th>会社名</th><th>種別</th><th>PT常勤</th><th>PT非常勤</th><th>放技</th><th>事務</th>
-      <th>手数料</th><th>紹介中</th><th>最終連絡</th><th>備考</th>
+      <th>\u4F1A\u793E\u540D</th><th>\u7A2E\u5225</th>`;
+  POSTING_KEYS.forEach(pk=>{
+    html+=`<th style="font-size:11px;text-align:center">${pk.label}</th>`;
+  });
+  html+=`<th>\u624B\u6570\u6599</th><th>\u7D39\u4ECB\u4E2D</th><th>\u6700\u7D42\u9023\u7D61</th><th>\u5099\u8003</th>
     </tr></thead><tbody>`;
 
   data.agencies.forEach(a=>{
     const activeCount=data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected'&&c.stage!=='hired').length;
     let feeStr='';
-    if(a.feeType==='fixed')feeStr=`常勤${formatYen(a.feeFixed.fulltime)} / 非常勤${formatYen(a.feeFixed.parttime)}`;
-    else if(a.feeType==='percent')feeStr=`年収${a.feePercent}%`+(a.feeMin?` (min ${formatYen(a.feeMin)})`:'');
-    else if(a.feeType==='success')feeStr='成功報酬型';
-    else if(a.feeType==='click')feeStr='クリック課金';
+    if(a.feeType==='fixed')feeStr=`\u5E38\u52E4${formatYen(a.feeFixed.fulltime)} / \u975E\u5E38\u52E4${formatYen(a.feeFixed.parttime)}`;
+    else if(a.feeType==='percent')feeStr=`\u5E74\u53CE${a.feePercent}%`+(a.feeMin?` (min ${formatYen(a.feeMin)})`:'');
+    else if(a.feeType==='success')feeStr='\u6210\u529F\u5831\u916C\u578B';
+    else if(a.feeType==='click')feeStr='\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1';
 
-    const postingKeys=['pt_full','pt_part','rt','office'];
     html+=`<tr>
       <td><strong>${a.name}</strong><br><span style="font-size:11px;color:var(--dim)">${a.company}</span></td>
       <td><span style="font-size:12px">${typeLabel[a.type]||a.type}</span></td>`;
-    postingKeys.forEach(pk=>{
-      const st=a.postings[pk]||'inactive';
-      html+=`<td><span class="posting-status ${postingClass[st]}" onclick="event.stopPropagation();togglePosting('${a.id}','${pk}')">${postingLabel[st]}</span></td>`;
+    POSTING_KEYS.forEach(pk=>{
+      const st=a.postings[pk.key]||'inactive';
+      html+=`<td style="text-align:center"><span class="posting-status ${postingClass[st]}" onclick="event.stopPropagation();togglePosting('${a.id}','${pk.key}')">${postingLabel[st]}</span></td>`;
     });
     html+=`<td style="font-size:12px">${feeStr}</td>
       <td style="text-align:center;font-weight:600">${activeCount}</td>
@@ -587,7 +822,7 @@ function togglePosting(agencyId,postingKey){
   a.postings[postingKey]=cycle[(idx+1)%cycle.length];
   saveData();
   render();
-  toast('掲載ステータスを更新しました');
+  toast('\u63B2\u8F09\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F');
 }
 
 // ============================================================
@@ -596,7 +831,6 @@ function togglePosting(agencyId,postingKey){
 function renderCosts(container){
   const activeCandidates=data.candidates.filter(c=>c.stage!=='rejected');
   const offerOrHired=data.candidates.filter(c=>c.stage==='offer'||c.stage==='hired');
-
   const totalEstCost=offerOrHired.reduce((s,c)=>s+calcFee(c),0);
   const hiredCount=data.candidates.filter(c=>c.stage==='hired').length;
   const avgCostPerHire=hiredCount?Math.round(data.candidates.filter(c=>c.stage==='hired').reduce((s,c)=>s+calcFee(c),0)/hiredCount):0;
@@ -604,44 +838,47 @@ function renderCosts(container){
 
   let html=`<div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-label">内定・入職の想定コスト合計</div>
+      <div class="stat-label">\u5185\u5B9A\u30FB\u5165\u8077\u306E\u60F3\u5B9A\u30B3\u30B9\u30C8\u5408\u8A08</div>
       <div class="stat-value" style="color:var(--primary)">${formatYen(totalEstCost)}</div>
-      <div class="stat-sub">${offerOrHired.length}名分</div>
+      <div class="stat-sub">${offerOrHired.length}\u540D\u5206</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">採用単価（入職済み平均）</div>
+      <div class="stat-label">\u63A1\u7528\u5358\u4FA1\uFF08\u5165\u8077\u6E08\u307F\u5E73\u5747\uFF09</div>
       <div class="stat-value">${formatYen(avgCostPerHire)}</div>
-      <div class="stat-sub">${hiredCount}名入職</div>
+      <div class="stat-sub">${hiredCount}\u540D\u5165\u8077</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">パイプライン内の想定コスト</div>
+      <div class="stat-label">\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u5185\u306E\u60F3\u5B9A\u30B3\u30B9\u30C8</div>
       <div class="stat-value">${formatYen(pipelineTotal)}</div>
-      <div class="stat-sub">選考中候補者 ${activeCandidates.filter(c=>c.stage!=='hired').length}名分</div>
+      <div class="stat-sub">\u9078\u8003\u4E2D\u5019\u88DC\u8005 ${activeCandidates.filter(c=>c.stage!=='hired').length}\u540D\u5206</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">月間採用予算</div>
+      <div class="stat-label">\u6708\u9593\u63A1\u7528\u4E88\u7B97</div>
       <div class="stat-value">${formatYen(data.settings.monthlyBudget)}</div>
-      <div class="stat-sub">残り: ${formatYen(Math.max(0,data.settings.monthlyBudget-totalEstCost))}</div>
+      <div class="stat-sub">\u6B8B\u308A: ${formatYen(Math.max(0,data.settings.monthlyBudget-totalEstCost))}</div>
     </div>
   </div>`;
 
-  // Cost per hire by job type
-  html+=`<div class="chart-container"><h4>職種別 採用コスト</h4><div class="bar-chart">`;
+  // Cost by job type x employ type
+  html+=`<div class="chart-container"><h4>\u8077\u7A2E\u00D7\u96C7\u7528\u5F62\u614B\u5225 \u63A1\u7528\u30B3\u30B9\u30C8</h4><div class="bar-chart">`;
   data.jobTypes.forEach(jt=>{
-    const cs=data.candidates.filter(c=>c.jobType===jt.id&&(c.stage==='offer'||c.stage==='hired'));
-    const total=cs.reduce((s,c)=>s+calcFee(c),0);
-    const maxVal=3000000;
-    const pct=Math.min(100,Math.round(total/maxVal*100));
-    html+=`<div class="bar-row">
-      <span class="bar-label">${jt.name}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,5)}%;background:${jt.color}">${cs.length}名</div></div>
-      <span class="bar-value">${formatYen(total)}</span>
-    </div>`;
+    ['fulltime','parttime'].forEach(et=>{
+      const label=jt.name+(et==='fulltime'?'\u5E38\u52E4':'\u975E\u5E38\u52E4');
+      const cs=data.candidates.filter(c=>c.jobType===jt.id&&c.employType===et&&(c.stage==='offer'||c.stage==='hired'));
+      const total=cs.reduce((s,c)=>s+calcFee(c),0);
+      const maxVal=3000000;
+      const pct=Math.min(100,Math.round(total/maxVal*100));
+      html+=`<div class="bar-row">
+        <span class="bar-label">${label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:${jt.color}${et==='parttime'?'99':''}">${cs.length}\u540D</div></div>
+        <span class="bar-value">${formatYen(total)}</span>
+      </div>`;
+    });
   });
   html+=`</div></div>`;
 
   // Agency comparison
-  html+=`<div class="chart-container"><h4>紹介会社別 候補者数・コスト比較</h4><div class="bar-chart">`;
+  html+=`<div class="chart-container"><h4>\u7D39\u4ECB\u4F1A\u793E\u5225 \u5019\u88DC\u8005\u6570\u30FB\u30B3\u30B9\u30C8\u6BD4\u8F03</h4><div class="bar-chart">`;
   const maxAgencyCost=Math.max(...data.agencies.map(a=>{
     return data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected').reduce((s,c)=>s+calcFee(c),0);
   }),1);
@@ -651,17 +888,35 @@ function renderCosts(container){
     const pct=Math.round(total/maxAgencyCost*100);
     html+=`<div class="bar-row">
       <span class="bar-label">${a.name}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)">${cs.length}名</div></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)">${cs.length}\u540D</div></div>
       <span class="bar-value">${formatYen(total)}</span>
     </div>`;
   });
   html+=`</div></div>`;
 
-  // Breakdown table
-  html+=`<div class="chart-container"><h4>紹介会社別 詳細内訳</h4>
-    <table class="data-table"><thead><tr><th>紹介会社</th><th>候補者数</th><th>選考中</th><th>内定</th><th>入職</th><th>見送り</th><th>想定コスト</th></tr></thead><tbody>`;
+  // Breakdown table by job type and employ type
+  html+=`<div class="chart-container"><h4>\u8077\u7A2E\u00D7\u96C7\u7528\u5F62\u614B \u8A73\u7D30\u5185\u8A33</h4>
+    <table class="data-table"><thead><tr><th>\u8077\u7A2E</th><th>\u96C7\u7528\u5F62\u614B</th><th>\u5019\u88DC\u8005\u6570</th><th>\u9078\u8003\u4E2D</th><th>\u5185\u5B9A</th><th>\u5165\u8077</th><th>\u898B\u9001\u308A</th><th>\u60F3\u5B9A\u30B3\u30B9\u30C8</th></tr></thead><tbody>`;
+  data.jobTypes.forEach(jt=>{
+    ['fulltime','parttime'].forEach(et=>{
+      const cs=data.candidates.filter(c=>c.jobType===jt.id&&c.employType===et);
+      if(cs.length===0)return;
+      const screening=cs.filter(c=>['screening','interview1','interview2'].includes(c.stage)).length;
+      const offer=cs.filter(c=>c.stage==='offer').length;
+      const hired=cs.filter(c=>c.stage==='hired').length;
+      const rejected=cs.filter(c=>c.stage==='rejected').length;
+      const cost=cs.filter(c=>c.stage==='offer'||c.stage==='hired').reduce((s,c)=>s+calcFee(c),0);
+      html+=`<tr style="cursor:default"><td>${jobBadge(jt.id)}</td><td>${employBadge(et)}</td><td>${cs.length}</td><td>${screening}</td><td>${offer}</td><td>${hired}</td><td>${rejected}</td><td style="font-weight:600">${formatYen(cost)}</td></tr>`;
+    });
+  });
+  html+=`</tbody></table></div>`;
+
+  // Agency breakdown table
+  html+=`<div class="chart-container"><h4>\u7D39\u4ECB\u4F1A\u793E\u5225 \u8A73\u7D30\u5185\u8A33</h4>
+    <table class="data-table"><thead><tr><th>\u7D39\u4ECB\u4F1A\u793E</th><th>\u5019\u88DC\u8005\u6570</th><th>\u9078\u8003\u4E2D</th><th>\u5185\u5B9A</th><th>\u5165\u8077</th><th>\u898B\u9001\u308A</th><th>\u60F3\u5B9A\u30B3\u30B9\u30C8</th></tr></thead><tbody>`;
   data.agencies.forEach(a=>{
     const cs=data.candidates.filter(c=>c.agencyId===a.id);
+    if(cs.length===0)return;
     const screening=cs.filter(c=>['screening','interview1','interview2'].includes(c.stage)).length;
     const offer=cs.filter(c=>c.stage==='offer').length;
     const hired=cs.filter(c=>c.stage==='hired').length;
@@ -678,11 +933,11 @@ function renderCosts(container){
 // 5. TEMPLATES
 // ============================================================
 function renderTemplates(container,topbar){
-  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddTemplate()">+ テンプレートを追加</button>`;
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddTemplate()">+ \u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8FFD\u52A0</button>`;
   let html='';
   data.templates.forEach(t=>{
     html+=`<div class="template-card">
-      <h4>${t.title} <span style="display:flex;gap:4px"><button class="btn btn-sm" onclick="copyTemplate('${t.id}')">コピー</button><button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">削除</button></span></h4>
+      <h4>${t.title} <span style="display:flex;gap:4px"><button class="btn btn-sm" onclick="copyTemplate('${t.id}')">\u30B3\u30D4\u30FC</button><button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">\u524A\u9664</button></span></h4>
       <textarea id="tpl_${t.id}" oninput="updateTemplate('${t.id}',this.value)">${t.content}</textarea>
     </div>`;
   });
@@ -696,28 +951,28 @@ function updateTemplate(id,val){
 
 function copyTemplate(id){
   const t=data.templates.find(x=>x.id===id);
-  if(t){navigator.clipboard.writeText(t.content).then(()=>toast('クリップボードにコピーしました'));}
+  if(t){navigator.clipboard.writeText(t.content).then(()=>toast('\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F'));}
 }
 
 function deleteTemplate(id){
-  if(!confirm('このテンプレートを削除しますか？'))return;
+  if(!confirm('\u3053\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F'))return;
   data.templates=data.templates.filter(t=>t.id!==id);
-  saveData();render();toast('テンプレートを削除しました');
+  saveData();render();toast('\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u524A\u9664\u3057\u307E\u3057\u305F');
 }
 
 function openAddTemplate(){
-  openModal('テンプレートを追加',`
-    <div class="form-group"><label>タイトル</label><input id="newTplTitle" placeholder="テンプレート名"></div>
-    <div class="form-group"><label>内容</label><textarea id="newTplContent" style="min-height:200px" placeholder="テンプレート内容を入力..."></textarea></div>
-  `,`<button class="btn" onclick="closeModal()">キャンセル</button><button class="btn btn-primary" onclick="saveNewTemplate()">追加</button>`);
+  openModal('\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8FFD\u52A0',`
+    <div class="form-group"><label>\u30BF\u30A4\u30C8\u30EB</label><input id="newTplTitle" placeholder="\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u540D"></div>
+    <div class="form-group"><label>\u5185\u5BB9</label><textarea id="newTplContent" style="min-height:200px" placeholder="\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u5185\u5BB9\u3092\u5165\u529B..."></textarea></div>
+  `,`<button class="btn" onclick="closeModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button><button class="btn btn-primary" onclick="saveNewTemplate()">\u8FFD\u52A0</button>`);
 }
 
 function saveNewTemplate(){
   const title=document.getElementById('newTplTitle').value.trim();
   const content=document.getElementById('newTplContent').value.trim();
-  if(!title){toast('タイトルを入力してください');return;}
+  if(!title){toast('\u30BF\u30A4\u30C8\u30EB\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044');return;}
   data.templates.push({id:genId(),title,content});
-  saveData();closeModal();render();toast('テンプレートを追加しました');
+  saveData();closeModal();render();toast('\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F');
 }
 
 // ============================================================
@@ -726,42 +981,42 @@ function saveNewTemplate(){
 function renderSettings(container){
   let html=`
   <div class="settings-section">
-    <h4>職種管理</h4>
+    <h4>\u8077\u7A2E\u7BA1\u7406</h4>
     <div style="margin-bottom:8px">`;
   data.jobTypes.forEach(jt=>{
     html+=`<span class="tag" style="border-left:3px solid ${jt.color}">${jt.name} <span class="remove" onclick="removeJobType('${jt.id}')">&times;</span></span>`;
   });
   html+=`</div>
-    <div style="display:flex;gap:8px"><input id="newJobType" placeholder="新しい職種名" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+    <div style="display:flex;gap:8px"><input id="newJobType" placeholder="\u65B0\u3057\u3044\u8077\u7A2E\u540D" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
     <input id="newJobTypeColor" type="color" value="#6366f1" style="width:40px;height:34px;border:none;cursor:pointer">
-    <button class="btn btn-sm" onclick="addJobType()">追加</button></div>
+    <button class="btn btn-sm" onclick="addJobType()">\u8FFD\u52A0</button></div>
   </div>
 
   <div class="settings-section">
-    <h4>パイプラインステージ</h4>
+    <h4>\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u30B9\u30C6\u30FC\u30B8</h4>
     <div style="margin-bottom:8px">`;
   data.stages.forEach(st=>{
     html+=`<span class="tag" style="border-left:3px solid ${st.color}">${st.name}</span>`;
   });
   html+=`</div>
-    <p style="font-size:12px;color:var(--dim)">ステージの追加・削除は候補者データに影響するため、慎重に行ってください。</p>
+    <p style="font-size:12px;color:var(--dim)">\u30B9\u30C6\u30FC\u30B8\u306E\u8FFD\u52A0\u30FB\u524A\u9664\u306F\u5019\u88DC\u8005\u30C7\u30FC\u30BF\u306B\u5F71\u97FF\u3059\u308B\u305F\u3081\u3001\u614E\u91CD\u306B\u884C\u3063\u3066\u304F\u3060\u3055\u3044\u3002</p>
   </div>
 
   <div class="settings-section">
-    <h4>予算設定</h4>
+    <h4>\u4E88\u7B97\u8A2D\u5B9A</h4>
     <div class="form-group">
-      <label>月間採用予算 (円)</label>
-      <input type="number" id="monthlyBudget" value="${data.settings.monthlyBudget}" onchange="data.settings.monthlyBudget=Number(this.value);saveData();toast('予算を更新しました')">
+      <label>\u6708\u9593\u63A1\u7528\u4E88\u7B97 (\u5186)</label>
+      <input type="number" id="monthlyBudget" value="${data.settings.monthlyBudget}" onchange="data.settings.monthlyBudget=Number(this.value);saveData();toast('\u4E88\u7B97\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F')">
     </div>
   </div>
 
   <div class="settings-section">
-    <h4>データ管理</h4>
+    <h4>\u30C7\u30FC\u30BF\u7BA1\u7406</h4>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="exportData()">データをエクスポート (JSON)</button>
-      <button class="btn" onclick="document.getElementById('importFile').click()">データをインポート</button>
+      <button class="btn" onclick="exportData()">\u30C7\u30FC\u30BF\u3092\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8 (JSON)</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">\u30C7\u30FC\u30BF\u3092\u30A4\u30F3\u30DD\u30FC\u30C8</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-      <button class="btn btn-danger" onclick="resetData()">データをリセット</button>
+      <button class="btn btn-danger" onclick="resetData()">\u30C7\u30FC\u30BF\u3092\u30EA\u30BB\u30C3\u30C8</button>
     </div>
   </div>`;
   container.innerHTML=html;
@@ -770,14 +1025,14 @@ function renderSettings(container){
 function addJobType(){
   const name=document.getElementById('newJobType').value.trim();
   const color=document.getElementById('newJobTypeColor').value;
-  if(!name){toast('職種名を入力してください');return;}
-  data.jobTypes.push({id:genId(),name,color,badgeClass:''});
-  saveData();render();toast('職種を追加しました');
+  if(!name){toast('\u8077\u7A2E\u540D\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044');return;}
+  data.jobTypes.push({id:genId(),name,fullName:name,color,badgeClass:''});
+  saveData();render();toast('\u8077\u7A2E\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F');
 }
 
 function removeJobType(id){
-  if(data.candidates.some(c=>c.jobType===id)){toast('この職種の候補者がいるため削除できません');return;}
-  if(!confirm('この職種を削除しますか？'))return;
+  if(data.candidates.some(c=>c.jobType===id)){toast('\u3053\u306E\u8077\u7A2E\u306E\u5019\u88DC\u8005\u304C\u3044\u308B\u305F\u3081\u524A\u9664\u3067\u304D\u307E\u305B\u3093');return;}
+  if(!confirm('\u3053\u306E\u8077\u7A2E\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F'))return;
   data.jobTypes=data.jobTypes.filter(j=>j.id!==id);
   saveData();render();
 }
@@ -788,7 +1043,7 @@ function exportData(){
   const a=document.createElement('a');
   a.href=url;a.download=`hireboard_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();URL.revokeObjectURL(url);
-  toast('データをエクスポートしました');
+  toast('\u30C7\u30FC\u30BF\u3092\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u3057\u307E\u3057\u305F');
 }
 
 function importData(event){
@@ -800,17 +1055,17 @@ function importData(event){
       const imported=JSON.parse(e.target.result);
       if(imported.candidates&&imported.agencies){
         data=imported;saveData();render();
-        toast('データをインポートしました');
-      }else{toast('無効なデータ形式です');}
-    }catch(err){toast('ファイルの読み込みに失敗しました');}
+        toast('\u30C7\u30FC\u30BF\u3092\u30A4\u30F3\u30DD\u30FC\u30C8\u3057\u307E\u3057\u305F');
+      }else{toast('\u7121\u52B9\u306A\u30C7\u30FC\u30BF\u5F62\u5F0F\u3067\u3059');}
+    }catch(err){toast('\u30D5\u30A1\u30A4\u30EB\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F');}
   };
   reader.readAsText(file);
   event.target.value='';
 }
 
 function resetData(){
-  if(!confirm('全てのデータを初期状態に戻しますか？この操作は元に戻せません。'))return;
-  data=getDefaultData();saveData();render();toast('データをリセットしました');
+  if(!confirm('\u5168\u3066\u306E\u30C7\u30FC\u30BF\u3092\u521D\u671F\u72B6\u614B\u306B\u623B\u3057\u307E\u3059\u304B\uFF1F\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002'))return;
+  data=getDefaultData();saveData();render();toast('\u30C7\u30FC\u30BF\u3092\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3057\u305F');
 }
 
 // ============================================================
@@ -837,7 +1092,7 @@ function openCandidateDetail(id){
   const fee=calcFee(c);
   const days=daysBetween(c.stageDate);
 
-  let agencyOpts=`<option value="">直接応募</option>`;
+  let agencyOpts=`<option value="">\u76F4\u63A5\u5FDC\u52DF</option>`;
   data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}" ${c.agencyId===a.id?'selected':''}>${a.name}</option>`;});
   let stageOpts='';
   data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}" ${c.stage===s.id?'selected':''}>${s.name}</option>`;});
@@ -846,46 +1101,46 @@ function openCandidateDetail(id){
 
   const body=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      ${jobBadge(c.jobType)} ${stageBadge(c.stage)}
-      <span style="font-size:12px;color:var(--dim)">${c.stage==='hired'?'入職済み':c.stage==='rejected'?'見送り':days+'日経過'}</span>
+      ${jobBadge(c.jobType)} ${employBadge(c.employType)} ${stageBadge(c.stage)}
+      <span style="font-size:12px;color:var(--dim)">${c.stage==='hired'?'\u5165\u8077\u6E08\u307F':c.stage==='rejected'?'\u898B\u9001\u308A':days+'\u65E5\u7D4C\u904E'}</span>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>氏名</label><input id="cd_name" value="${c.name}"></div>
-      <div class="form-group"><label>職種</label><select id="cd_jobType">${jtOpts}</select></div>
+      <div class="form-group"><label>\u6C0F\u540D</label><input id="cd_name" value="${c.name}"></div>
+      <div class="form-group"><label>\u8077\u7A2E</label><select id="cd_jobType">${jtOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>経験年数</label><input id="cd_exp" type="number" value="${c.expYears}"></div>
-      <div class="form-group"><label>雇用形態</label><select id="cd_employ"><option value="fulltime" ${c.employType==='fulltime'?'selected':''}>常勤</option><option value="parttime" ${c.employType==='parttime'?'selected':''}>非常勤</option></select></div>
+      <div class="form-group"><label>\u7D4C\u9A13\u5E74\u6570</label><input id="cd_exp" type="number" value="${c.expYears}"></div>
+      <div class="form-group"><label>\u96C7\u7528\u5F62\u614B</label><select id="cd_employ"><option value="fulltime" ${c.employType==='fulltime'?'selected':''}>\u5E38\u52E4</option><option value="parttime" ${c.employType==='parttime'?'selected':''}>\u975E\u5E38\u52E4</option></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>紹介元</label><select id="cd_agency">${agencyOpts}</select></div>
-      <div class="form-group"><label>ステージ</label><select id="cd_stage">${stageOpts}</select></div>
+      <div class="form-group"><label>\u7D39\u4ECB\u5143</label><select id="cd_agency">${agencyOpts}</select></div>
+      <div class="form-group"><label>\u30B9\u30C6\u30FC\u30B8</label><select id="cd_stage">${stageOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>想定年収 (円)</label><input id="cd_salary" type="number" value="${c.salary||0}"></div>
-      <div class="form-group"><label>担当者</label><input id="cd_assignee" value="${c.assignee||''}"></div>
+      <div class="form-group"><label>\u60F3\u5B9A\u5E74\u53CE (\u5186)</label><input id="cd_salary" type="number" value="${c.salary||0}"></div>
+      <div class="form-group"><label>\u62C5\u5F53\u8005</label><input id="cd_assignee" value="${c.assignee||''}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>初回接触日</label><input id="cd_firstContact" type="date" value="${c.firstContact||''}"></div>
-      <div class="form-group"><label>最終更新日</label><input id="cd_lastAction" type="date" value="${c.lastAction||''}"></div>
+      <div class="form-group"><label>\u521D\u56DE\u63A5\u89E6\u65E5</label><input id="cd_firstContact" type="date" value="${c.firstContact||''}"></div>
+      <div class="form-group"><label>\u6700\u7D42\u66F4\u65B0\u65E5</label><input id="cd_lastAction" type="date" value="${c.lastAction||''}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>電話番号</label><input id="cd_phone" value="${c.phone||''}"></div>
-      <div class="form-group"><label>メール</label><input id="cd_email" value="${c.email||''}"></div>
+      <div class="form-group"><label>\u96FB\u8A71\u756A\u53F7</label><input id="cd_phone" value="${c.phone||''}"></div>
+      <div class="form-group"><label>\u30E1\u30FC\u30EB</label><input id="cd_email" value="${c.email||''}"></div>
     </div>
-    <div class="form-group"><label>メモ</label><textarea id="cd_notes">${c.notes||''}</textarea></div>
+    <div class="form-group"><label>\u30E1\u30E2</label><textarea id="cd_notes">${c.notes||''}</textarea></div>
 
     <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px">
-      <div style="font-size:12px;font-weight:600;margin-bottom:6px">紹介料情報</div>
-      <div style="font-size:13px">紹介元: <strong>${agency?agency.name:'直接応募'}</strong></div>
-      ${agency?`<div style="font-size:13px">手数料体系: ${agency.feeType==='fixed'?'固定額':agency.feeType==='percent'?'年収'+agency.feePercent+'%':agency.feeType==='success'?'成功報酬型':'クリック課金'}</div>`:''}
-      <div style="font-size:16px;font-weight:700;color:var(--primary);margin-top:4px">想定紹介料: ${formatYen(fee)}</div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">\u7D39\u4ECB\u6599\u60C5\u5831</div>
+      <div style="font-size:13px">\u7D39\u4ECB\u5143: <strong>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</strong></div>
+      ${agency?`<div style="font-size:13px">\u624B\u6570\u6599\u4F53\u7CFB: ${agency.feeType==='fixed'?'\u56FA\u5B9A\u984D':agency.feeType==='percent'?'\u5E74\u53CE'+agency.feePercent+'%':agency.feeType==='success'?'\u6210\u529F\u5831\u916C\u578B':'\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1'}</div>`:''}
+      <div style="font-size:16px;font-weight:700;color:var(--primary);margin-top:4px">\u60F3\u5B9A\u7D39\u4ECB\u6599: ${formatYen(fee)}</div>
     </div>`;
 
-  openModal('候補者詳細', body,
-    `<button class="btn btn-danger" onclick="deleteCandidate('${c.id}')">削除</button>
-     <button class="btn" onclick="closeModal()">キャンセル</button>
-     <button class="btn btn-primary" onclick="saveCandidateDetail('${c.id}')">保存</button>`);
+  openModal('\u5019\u88DC\u8005\u8A73\u7D30', body,
+    `<button class="btn btn-danger" onclick="deleteCandidate('${c.id}')">\u524A\u9664</button>
+     <button class="btn" onclick="closeModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
+     <button class="btn btn-primary" onclick="saveCandidateDetail('${c.id}')">\u4FDD\u5B58</button>`);
 }
 
 function saveCandidateDetail(id){
@@ -906,18 +1161,18 @@ function saveCandidateDetail(id){
   c.email=document.getElementById('cd_email').value.trim();
   c.notes=document.getElementById('cd_notes').value;
   if(c.stage!==oldStage)c.stageDate=new Date().toISOString().slice(0,10);
-  saveData();closeModal();render();toast('候補者情報を更新しました');
+  saveData();closeModal();render();toast('\u5019\u88DC\u8005\u60C5\u5831\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F');
 }
 
 function deleteCandidate(id){
-  if(!confirm('この候補者を削除しますか？'))return;
+  if(!confirm('\u3053\u306E\u5019\u88DC\u8005\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F'))return;
   data.candidates=data.candidates.filter(c=>c.id!==id);
-  saveData();closeModal();render();toast('候補者を削除しました');
+  saveData();closeModal();render();toast('\u5019\u88DC\u8005\u3092\u524A\u9664\u3057\u307E\u3057\u305F');
 }
 
 // Add Candidate Modal
 function openAddCandidate(){
-  let agencyOpts=`<option value="">直接応募</option>`;
+  let agencyOpts=`<option value="">\u76F4\u63A5\u5FDC\u52DF</option>`;
   data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}">${a.name}</option>`;});
   let stageOpts='';
   data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}">${s.name}</option>`;});
@@ -926,35 +1181,35 @@ function openAddCandidate(){
 
   const body=`
     <div class="form-row">
-      <div class="form-group"><label>氏名 *</label><input id="nc_name" placeholder="山田 太郎"></div>
-      <div class="form-group"><label>職種 *</label><select id="nc_jobType">${jtOpts}</select></div>
+      <div class="form-group"><label>\u6C0F\u540D *</label><input id="nc_name" placeholder="\u5C71\u7530 \u592A\u90CE"></div>
+      <div class="form-group"><label>\u8077\u7A2E *</label><select id="nc_jobType">${jtOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>経験年数</label><input id="nc_exp" type="number" value="0" min="0"></div>
-      <div class="form-group"><label>雇用形態</label><select id="nc_employ"><option value="fulltime">常勤</option><option value="parttime">非常勤</option></select></div>
+      <div class="form-group"><label>\u7D4C\u9A13\u5E74\u6570</label><input id="nc_exp" type="number" value="0" min="0"></div>
+      <div class="form-group"><label>\u96C7\u7528\u5F62\u614B</label><select id="nc_employ"><option value="fulltime">\u5E38\u52E4</option><option value="parttime">\u975E\u5E38\u52E4</option></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>紹介元</label><select id="nc_agency">${agencyOpts}</select></div>
-      <div class="form-group"><label>ステージ</label><select id="nc_stage">${stageOpts}</select></div>
+      <div class="form-group"><label>\u7D39\u4ECB\u5143</label><select id="nc_agency">${agencyOpts}</select></div>
+      <div class="form-group"><label>\u30B9\u30C6\u30FC\u30B8</label><select id="nc_stage">${stageOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>想定年収 (円)</label><input id="nc_salary" type="number" value="0"></div>
-      <div class="form-group"><label>担当者</label><input id="nc_assignee" placeholder="担当者名"></div>
+      <div class="form-group"><label>\u60F3\u5B9A\u5E74\u53CE (\u5186)</label><input id="nc_salary" type="number" value="0"></div>
+      <div class="form-group"><label>\u62C5\u5F53\u8005</label><input id="nc_assignee" placeholder="\u62C5\u5F53\u8005\u540D"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>電話番号</label><input id="nc_phone"></div>
-      <div class="form-group"><label>メール</label><input id="nc_email" type="email"></div>
+      <div class="form-group"><label>\u96FB\u8A71\u756A\u53F7</label><input id="nc_phone"></div>
+      <div class="form-group"><label>\u30E1\u30FC\u30EB</label><input id="nc_email" type="email"></div>
     </div>
-    <div class="form-group"><label>メモ</label><textarea id="nc_notes"></textarea></div>`;
+    <div class="form-group"><label>\u30E1\u30E2</label><textarea id="nc_notes"></textarea></div>`;
 
-  openModal('候補者を追加', body,
-    `<button class="btn" onclick="closeModal()">キャンセル</button>
-     <button class="btn btn-primary" onclick="saveNewCandidate()">追加</button>`);
+  openModal('\u5019\u88DC\u8005\u3092\u8FFD\u52A0', body,
+    `<button class="btn" onclick="closeModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
+     <button class="btn btn-primary" onclick="saveNewCandidate()">\u8FFD\u52A0</button>`);
 }
 
 function saveNewCandidate(){
   const name=document.getElementById('nc_name').value.trim();
-  if(!name){toast('氏名を入力してください');return;}
+  if(!name){toast('\u6C0F\u540D\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044');return;}
   const today=new Date().toISOString().slice(0,10);
   data.candidates.push({
     id:genId(),
@@ -973,37 +1228,37 @@ function saveNewCandidate(){
     phone:document.getElementById('nc_phone').value.trim(),
     email:document.getElementById('nc_email').value.trim()
   });
-  saveData();closeModal();render();toast('候補者を追加しました');
+  saveData();closeModal();render();toast('\u5019\u88DC\u8005\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F');
 }
 
 // Add Agency Modal
 function openAddAgency(){
   const body=`
     <div class="form-row">
-      <div class="form-group"><label>サービス名 *</label><input id="na_name" placeholder="サービス名"></div>
-      <div class="form-group"><label>会社名 *</label><input id="na_company" placeholder="運営会社名"></div>
+      <div class="form-group"><label>\u30B5\u30FC\u30D3\u30B9\u540D *</label><input id="na_name" placeholder="\u30B5\u30FC\u30D3\u30B9\u540D"></div>
+      <div class="form-group"><label>\u4F1A\u793E\u540D *</label><input id="na_company" placeholder="\u904B\u55B6\u4F1A\u793E\u540D"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>種別</label><select id="na_type"><option value="posting">求人掲載型</option><option value="agent">エージェント型</option></select></div>
-      <div class="form-group"><label>手数料タイプ</label><select id="na_feeType" onchange="toggleAgencyFeeFields()"><option value="fixed">固定額</option><option value="percent">年収パーセント</option><option value="success">成功報酬型</option><option value="click">クリック課金</option></select></div>
+      <div class="form-group"><label>\u7A2E\u5225</label><select id="na_type"><option value="posting">\u6C42\u4EBA\u63B2\u8F09\u578B</option><option value="agent">\u30A8\u30FC\u30B8\u30A7\u30F3\u30C8\u578B</option></select></div>
+      <div class="form-group"><label>\u624B\u6570\u6599\u30BF\u30A4\u30D7</label><select id="na_feeType" onchange="toggleAgencyFeeFields()"><option value="fixed">\u56FA\u5B9A\u984D</option><option value="percent">\u5E74\u53CE\u30D1\u30FC\u30BB\u30F3\u30C8</option><option value="success">\u6210\u529F\u5831\u916C\u578B</option><option value="click">\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1</option></select></div>
     </div>
     <div id="feeFieldsFixed">
       <div class="form-row">
-        <div class="form-group"><label>常勤紹介料 (円)</label><input id="na_feeFull" type="number" value="0"></div>
-        <div class="form-group"><label>非常勤紹介料 (円)</label><input id="na_feePart" type="number" value="0"></div>
+        <div class="form-group"><label>\u5E38\u52E4\u7D39\u4ECB\u6599 (\u5186)</label><input id="na_feeFull" type="number" value="0"></div>
+        <div class="form-group"><label>\u975E\u5E38\u52E4\u7D39\u4ECB\u6599 (\u5186)</label><input id="na_feePart" type="number" value="0"></div>
       </div>
     </div>
     <div id="feeFieldsPercent" style="display:none">
       <div class="form-row">
-        <div class="form-group"><label>パーセント (%)</label><input id="na_feePct" type="number" value="30"></div>
-        <div class="form-group"><label>最低紹介料 (円)</label><input id="na_feeMin" type="number" value="0"></div>
+        <div class="form-group"><label>\u30D1\u30FC\u30BB\u30F3\u30C8 (%)</label><input id="na_feePct" type="number" value="30"></div>
+        <div class="form-group"><label>\u6700\u4F4E\u7D39\u4ECB\u6599 (\u5186)</label><input id="na_feeMin" type="number" value="0"></div>
       </div>
     </div>
-    <div class="form-group"><label>備考</label><textarea id="na_notes"></textarea></div>`;
+    <div class="form-group"><label>\u5099\u8003</label><textarea id="na_notes"></textarea></div>`;
 
-  openModal('紹介会社を追加', body,
-    `<button class="btn" onclick="closeModal()">キャンセル</button>
-     <button class="btn btn-primary" onclick="saveNewAgency()">追加</button>`);
+  openModal('\u7D39\u4ECB\u4F1A\u793E\u3092\u8FFD\u52A0', body,
+    `<button class="btn" onclick="closeModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
+     <button class="btn btn-primary" onclick="saveNewAgency()">\u8FFD\u52A0</button>`);
 }
 
 function toggleAgencyFeeFields(){
@@ -1015,8 +1270,10 @@ function toggleAgencyFeeFields(){
 function saveNewAgency(){
   const name=document.getElementById('na_name').value.trim();
   const company=document.getElementById('na_company').value.trim();
-  if(!name||!company){toast('サービス名と会社名を入力してください');return;}
+  if(!name||!company){toast('\u30B5\u30FC\u30D3\u30B9\u540D\u3068\u4F1A\u793E\u540D\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044');return;}
   const feeType=document.getElementById('na_feeType').value;
+  const postings={};
+  POSTING_KEYS.forEach(pk=>{postings[pk.key]='inactive';});
   data.agencies.push({
     id:genId(),name,company,
     type:document.getElementById('na_type').value,
@@ -1024,11 +1281,11 @@ function saveNewAgency(){
     feeFixed:{fulltime:Number(document.getElementById('na_feeFull').value),parttime:Number(document.getElementById('na_feePart').value)},
     feePercent:Number(document.getElementById('na_feePct')?.value||0),
     feeMin:Number(document.getElementById('na_feeMin')?.value||0),
-    postings:{pt_full:'inactive',pt_part:'inactive',rt:'inactive',office:'inactive'},
+    postings,
     lastContact:new Date().toISOString().slice(0,10),
     notes:document.getElementById('na_notes').value
   });
-  saveData();closeModal();render();toast('紹介会社を追加しました');
+  saveData();closeModal();render();toast('\u7D39\u4ECB\u4F1A\u793E\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F');
 }
 
 // ============================================================
