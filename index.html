@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HireBoard - 医療機関向け採用管理ボード</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;
+--text:#1e293b;--dim:#64748b;
+--primary:#2563eb;--primary-light:#dbeafe;
+--pt:#2563eb;--rt:#16a34a;--office:#f59e0b;
+--stage-screen:#64748b;--stage-1st:#2563eb;--stage-2nd:#7c3aed;
+--stage-offer:#16a34a;--stage-hired:#059669;--stage-reject:#dc2626;
+--sidebar-w:220px;
+}
+html{font-size:14px}
+body{font-family:system-ui,'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);background:#1e293b;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:10px}
+.sidebar-brand .logo{width:36px;height:36px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.sidebar-brand h1{font-size:16px;font-weight:700;letter-spacing:-.5px}
+.sidebar-brand small{display:block;font-size:10px;color:#94a3b8;font-weight:400;margin-top:2px}
+.sidebar nav{flex:1;padding:12px 0}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 16px;color:#94a3b8;text-decoration:none;font-size:13px;transition:all .15s;border-left:3px solid transparent;cursor:pointer}
+.sidebar nav a:hover{color:#fff;background:#334155}
+.sidebar nav a.active{color:#fff;background:#334155;border-left-color:var(--primary)}
+.sidebar nav a .icon{width:20px;text-align:center;font-size:15px}
+.sidebar-footer{padding:16px;border-top:1px solid #334155;font-size:11px;color:#64748b}
+.sidebar-footer a{color:#94a3b8;text-decoration:none}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar h2{font-size:18px;font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.content{flex:1;padding:24px;overflow-y:auto}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn:hover{background:#f1f5f9}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:#1d4ed8}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{background:#dc2626;color:#fff;border-color:#dc2626}
+.btn-danger:hover{background:#b91c1c}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-pt{background:#dbeafe;color:#2563eb}
+.badge-rt{background:#dcfce7;color:#16a34a}
+.badge-office{background:#fef3c7;color:#d97706}
+.badge-stage{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-btn{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:var(--card);color:var(--dim);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+.filter-btn:hover{border-color:var(--primary);color:var(--primary)}
+.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Kanban */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;min-height:calc(100vh - 200px)}
+.kanban-col{min-width:240px;max-width:280px;flex:1;display:flex;flex-direction:column}
+.kanban-col-header{padding:10px 12px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#fff}
+.kanban-col-body{flex:1;background:#f1f5f9;border-radius:0 0 8px 8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-height:100px}
+.kanban-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:all .15s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);transform:translateY(-1px)}
+.kanban-card .card-name{font-weight:600;font-size:13px;margin-bottom:4px}
+.kanban-card .card-meta{font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:3px}
+.kanban-card .card-fee{font-size:11px;color:var(--primary);font-weight:500;margin-top:4px}
+.kanban-card .card-days{font-size:10px;color:var(--dim);margin-top:4px}
+.kanban-count{background:rgba(255,255,255,.3);border-radius:10px;padding:1px 8px;font-size:11px}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:#f1f5f9;padding:10px 12px;text-align:left;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.data-table th:hover{background:#e2e8f0}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover td{background:#f8fafc}
+.data-table tr{cursor:pointer}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--card);border-radius:12px;width:90%;max-width:640px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:scale(.95);transition:transform .2s}
+.modal-overlay.show .modal{transform:scale(1)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1;border-radius:12px 12px 0 0}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--dim);padding:4px 8px;border-radius:4px}
+.modal-close:hover{background:#f1f5f9}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:4px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--text)}
+.form-group textarea{min-height:80px;resize:vertical}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-card .stat-label{font-size:12px;color:var(--dim);margin-bottom:4px}
+.stat-card .stat-value{font-size:24px;font-weight:700}
+.stat-card .stat-sub{font-size:11px;color:var(--dim);margin-top:4px}
+
+/* Chart placeholder */
+.chart-container{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.chart-container h4{font-size:14px;font-weight:600;margin-bottom:12px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-row .bar-label{min-width:140px;text-align:right;color:var(--dim)}
+.bar-row .bar-track{flex:1;height:24px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative}
+.bar-row .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;color:#fff;font-size:11px;font-weight:500;white-space:nowrap;min-width:fit-content;transition:width .3s}
+.bar-row .bar-value{min-width:60px;font-weight:600;font-size:12px}
+
+/* Templates */
+.template-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.template-card h4{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.template-card textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;color:var(--text)}
+
+/* Settings */
+.settings-section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.settings-section h4{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#f1f5f9;border-radius:14px;font-size:12px;margin:2px 4px 2px 0}
+.tag .remove{cursor:pointer;color:var(--dim);font-size:14px}
+.tag .remove:hover{color:#dc2626}
+
+/* Agency posting status */
+.posting-status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer;user-select:none;font-weight:500}
+.posting-status.active{background:#dcfce7;color:#16a34a}
+.posting-status.inactive{background:#f1f5f9;color:#94a3b8}
+.posting-status.inprogress{background:#fef3c7;color:#d97706}
+
+/* Responsive */
+@media(max-width:768px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.main{margin-left:0}
+.topbar{padding:12px 16px}
+.content{padding:16px}
+.kanban{min-height:auto}
+.kanban-col{min-width:220px}
+.form-row{grid-template-columns:1fr}
+.stats-grid{grid-template-columns:1fr 1fr}
+.mobile-toggle{display:block!important}
+}
+.mobile-toggle{display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px}
+
+/* Notification */
+.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;z-index:300;transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* Agency table specifics */
+.agency-posting-grid{display:flex;gap:4px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">H</div>
+    <div><h1>HireBoard</h1><small>医療機関向け採用管理ボード</small></div>
+  </div>
+  <nav>
+    <a class="active" data-page="pipeline" onclick="showPage('pipeline')"><span class="icon">📋</span>パイプライン</a>
+    <a data-page="candidates" onclick="showPage('candidates')"><span class="icon">👥</span>候補者一覧</a>
+    <a data-page="agencies" onclick="showPage('agencies')"><span class="icon">🏢</span>紹介会社管理</a>
+    <a data-page="costs" onclick="showPage('costs')"><span class="icon">💰</span>コスト分析</a>
+    <a data-page="templates" onclick="showPage('templates')"><span class="icon">📝</span>テンプレート</a>
+    <a data-page="settings" onclick="showPage('settings')"><span class="icon">⚙️</span>設定</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div>BRIDGE Product Suite</div>
+    <div style="margin-top:4px">v1.0.0</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <h2 id="pageTitle">パイプライン</h2>
+    </div>
+    <div class="topbar-actions" id="topbarActions"></div>
+  </div>
+  <div class="content" id="content"></div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+const STORAGE_KEY = 'hireboard_data';
+
+const DEFAULT_STAGES = [
+  {id:'screening',name:'書類選考',color:'#64748b'},
+  {id:'interview1',name:'一次面接',color:'#2563eb'},
+  {id:'interview2',name:'二次面接/見学',color:'#7c3aed'},
+  {id:'offer',name:'内定',color:'#16a34a'},
+  {id:'hired',name:'入職済み',color:'#059669'},
+  {id:'rejected',name:'見送り',color:'#dc2626'}
+];
+
+const DEFAULT_JOB_TYPES = [
+  {id:'pt',name:'PT',color:'#2563eb',badgeClass:'badge-pt'},
+  {id:'rt',name:'放射線技師',color:'#16a34a',badgeClass:'badge-rt'},
+  {id:'office',name:'事務',color:'#f59e0b',badgeClass:'badge-office'}
+];
+
+const DEFAULT_AGENCIES = [
+  {id:'a1',name:'コメディカルドットコム',company:'セカンドラボ',type:'posting',feeType:'fixed',feeFixed:{fulltime:220000,parttime:140000},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'inactive'},lastContact:'2026-03-20',notes:'掲載プラン更新済み。担当: 山本さん'},
+  {id:'a2',name:'レバウェル',company:'レバレジーズ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'inactive',rt:'inprogress',office:'inactive'},lastContact:'2026-04-10',notes:'PT常勤の紹介依頼中'},
+  {id:'a3',name:'PTOTSTワーカー',company:'トライトキャリア',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:600000,postings:{pt_full:'active',pt_part:'active',rt:'inactive',office:'inactive'},lastContact:'2026-04-05',notes:'PT非常勤も依頼開始'},
+  {id:'a4',name:'PTOT人材バンク',company:'エス・エム・エス',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',rt:'inactive',office:'inactive'},lastContact:'2026-03-28',notes:''},
+  {id:'a5',name:'ジョブメドレー',company:'メドレー',type:'posting',feeType:'success',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'active'},lastContact:'2026-04-01',notes:'成功報酬型。全職種掲載中'},
+  {id:'a6',name:'マイナビコメディカル',company:'マイナビ',type:'agent',feeType:'percent',feeFixed:{fulltime:0,parttime:0},feePercent:30,feeMin:0,postings:{pt_full:'active',pt_part:'inactive',rt:'active',office:'inactive'},lastContact:'2026-04-08',notes:'放射線技師の紹介に注力中'},
+  {id:'a7',name:'Indeed',company:'Indeed',type:'posting',feeType:'click',feeFixed:{fulltime:0,parttime:0},feePercent:0,feeMin:0,postings:{pt_full:'active',pt_part:'active',rt:'active',office:'active'},lastContact:'2026-03-15',notes:'クリック課金型。月額予算5万円'}
+];
+
+const DEFAULT_CANDIDATES = [
+  {id:'c1',name:'伊藤 健太',jobType:'pt',expYears:14,agencyId:'a2',stage:'hired',salary:5200000,employType:'fulltime',firstContact:'2025-11-15',lastAction:'2026-02-01',stageDate:'2026-02-01',assignee:'院長',notes:'2月入職済み。即戦力として活躍中。',phone:'090-1234-5678',email:'ito@example.com'},
+  {id:'c2',name:'佐藤 美咲',jobType:'pt',expYears:6,agencyId:'a3',stage:'interview2',salary:4200000,employType:'fulltime',firstContact:'2026-03-01',lastAction:'2026-04-12',stageDate:'2026-04-10',assignee:'院長',notes:'見学日程調整中。4/18候補。',phone:'090-2345-6789',email:''},
+  {id:'c3',name:'田中 翔太',jobType:'pt',expYears:3,agencyId:'a1',stage:'screening',salary:3600000,employType:'fulltime',firstContact:'2026-04-10',lastAction:'2026-04-10',stageDate:'2026-04-10',assignee:'事務長',notes:'新卒3年目。回復期リハ経験あり。',phone:'',email:''},
+  {id:'c4',name:'山田 花子',jobType:'pt',expYears:8,agencyId:'a5',stage:'interview1',salary:4500000,employType:'fulltime',firstContact:'2026-03-20',lastAction:'2026-04-08',stageDate:'2026-04-05',assignee:'院長',notes:'整形外科クリニック勤務。一次面接4/15予定。',phone:'080-3456-7890',email:''},
+  {id:'c5',name:'鈴木 大輔',jobType:'pt',expYears:1,agencyId:'a5',stage:'rejected',salary:3400000,employType:'parttime',firstContact:'2026-02-10',lastAction:'2026-03-15',stageDate:'2026-03-15',assignee:'院長',notes:'非常勤希望。勤務日数が合わず見送り。',phone:'',email:''},
+  {id:'c6',name:'高橋 裕子',jobType:'rt',expYears:10,agencyId:'a6',stage:'offer',salary:4800000,employType:'fulltime',firstContact:'2026-03-05',lastAction:'2026-04-14',stageDate:'2026-04-12',assignee:'院長',notes:'内定承諾待ち。4/20回答期限。',phone:'090-4567-8901',email:'takahashi@example.com'},
+  {id:'c7',name:'渡辺 誠',jobType:'rt',expYears:5,agencyId:'a2',stage:'interview1',salary:4000000,employType:'fulltime',firstContact:'2026-04-01',lastAction:'2026-04-11',stageDate:'2026-04-08',assignee:'事務長',notes:'総合病院からの転職希望。一次面接済み、結果連絡待ち。',phone:'',email:''},
+  {id:'c8',name:'中村 あゆみ',jobType:'rt',expYears:2,agencyId:'a1',stage:'screening',salary:3500000,employType:'fulltime',firstContact:'2026-04-13',lastAction:'2026-04-13',stageDate:'2026-04-13',assignee:'事務長',notes:'書類確認中。CT経験あり。',phone:'',email:''},
+  {id:'c9',name:'小林 真理',jobType:'office',expYears:7,agencyId:'a5',stage:'interview2',salary:3200000,employType:'fulltime',firstContact:'2026-03-10',lastAction:'2026-04-10',stageDate:'2026-04-08',assignee:'事務長',notes:'医療事務経験豊富。見学後に二次面接予定。',phone:'080-5678-9012',email:''},
+  {id:'c10',name:'加藤 優',jobType:'office',expYears:0,agencyId:'a7',stage:'screening',salary:2800000,employType:'fulltime',firstContact:'2026-04-12',lastAction:'2026-04-12',stageDate:'2026-04-12',assignee:'事務長',notes:'未経験。医療事務資格取得予定。',phone:'',email:''},
+  {id:'c11',name:'松本 恵',jobType:'office',expYears:3,agencyId:'a5',stage:'interview1',salary:3000000,employType:'parttime',firstContact:'2026-03-25',lastAction:'2026-04-09',stageDate:'2026-04-05',assignee:'事務長',notes:'週3希望。レセプト経験あり。',phone:'070-6789-0123',email:''},
+  {id:'c12',name:'吉田 拓也',jobType:'office',expYears:5,agencyId:'a1',stage:'offer',salary:3400000,employType:'fulltime',firstContact:'2026-02-20',lastAction:'2026-04-14',stageDate:'2026-04-13',assignee:'院長',notes:'医事課リーダー経験あり。内定通知済み。',phone:'090-7890-1234',email:'yoshida@example.com'}
+];
+
+const DEFAULT_TEMPLATES = [
+  {id:'t1',title:'常勤PT スカウトメッセージ',content:`【常勤PT募集のご案内】
+
+はじめまして。○○クリニック 採用担当の△△と申します。
+
+この度、貴殿のご経歴を拝見し、ぜひ当院の理学療法士（常勤）としてお力をお借りできればと思い、ご連絡いたしました。
+
+■ 募集概要
+・職種：理学療法士（常勤）
+・勤務地：○○クリニック（最寄駅：○○駅 徒歩5分）
+・診療科：整形外科・リハビリテーション科
+・給与：月給28万〜40万（経験・能力に応じて優遇）
+・勤務時間：8:30〜17:30（残業月10時間程度）
+・休日：日祝＋平日1日（週休2日制）
+
+■ 当院の特徴
+・外来リハビリ中心で1日あたり18〜20単位
+・運動器リハに特化した最新設備を完備
+・スタッフ間の雰囲気が良く、離職率が低い職場です
+・研修制度・資格取得支援あり
+
+まずはカジュアルな見学からでも構いません。
+ご興味をお持ちいただけましたら、お気軽にご返信ください。
+
+何卒よろしくお願いいたします。`},
+  {id:'t2',title:'非常勤PT スカウトメッセージ',content:`【非常勤PT募集のご案内】
+
+はじめまして。○○クリニック 採用担当の△△と申します。
+
+非常勤の理学療法士を募集しており、ぜひご検討いただきたくご連絡いたしました。
+
+■ 募集概要
+・職種：理学療法士（非常勤・パート）
+・勤務地：○○クリニック
+・時給：1,800円〜2,500円（経験考慮）
+・勤務日数：週2〜4日で応相談
+・勤務時間：9:00〜17:00の間で応相談
+
+■ おすすめポイント
+・ダブルワークOK
+・勤務日数・時間の柔軟な調整が可能
+・外来整形リハ中心で体力的な負担が少ない
+・ブランクのある方も歓迎
+
+ご都合の良い曜日・時間帯をお知らせいただければ、
+調整のうえご見学のご案内をいたします。
+
+お気軽にご連絡ください。`},
+  {id:'t3',title:'求人掲載テンプレート（PT）',content:`【理学療法士募集（常勤・非常勤）】
+
+○○クリニックでは、理学療法士を募集しています。
+
+【施設概要】
+・診療科目：整形外科、リハビリテーション科
+・リハスタッフ：PT○名、OT○名
+・1日の患者数：外来○名、リハ○名
+
+【募集要項】
+・資格：理学療法士免許
+・経験：不問（経験者優遇）
+・雇用形態：常勤 / 非常勤
+
+【待遇・福利厚生】
+・昇給年1回、賞与年2回
+・社会保険完備
+・交通費支給（上限月3万円）
+・制服貸与
+・研修費補助制度あり`},
+  {id:'t4',title:'紹介会社オンボーディングチェックリスト',content:`【新規紹介会社 契約・運用開始チェックリスト】
+
+□ 基本契約書の締結
+□ 手数料率・返金規定の確認
+□ 担当者連絡先の登録
+□ 求人票の送付（職種ごと）
+□ クリニック概要資料の共有
+□ 見学対応可能日の連絡
+□ 面接フローの説明
+□ 候補者紹介時の連絡方法の確認
+□ HireBoardへの登録
+□ 初回ミーティングの実施`}
+];
+
+function getDefaultData(){
+  return {
+    stages: JSON.parse(JSON.stringify(DEFAULT_STAGES)),
+    jobTypes: JSON.parse(JSON.stringify(DEFAULT_JOB_TYPES)),
+    agencies: JSON.parse(JSON.stringify(DEFAULT_AGENCIES)),
+    candidates: JSON.parse(JSON.stringify(DEFAULT_CANDIDATES)),
+    templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)),
+    settings: {monthlyBudget:2000000}
+  };
+}
+
+function loadData(){
+  try{
+    const d = localStorage.getItem(STORAGE_KEY);
+    if(d) return JSON.parse(d);
+  }catch(e){}
+  return getDefaultData();
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+
+// ============================================================
+// UTILITY
+// ============================================================
+function genId(){return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)}
+
+function getAgency(id){return data.agencies.find(a=>a.id===id)}
+function getJobType(id){return data.jobTypes.find(j=>j.id===id)}
+function getStage(id){return data.stages.find(s=>s.id===id)}
+
+function daysBetween(d1,d2){
+  const a=new Date(d1),b=new Date(d2||'2026-04-15');
+  return Math.max(0,Math.floor((b-a)/(1000*60*60*24)));
+}
+
+function formatYen(n){
+  if(!n||n===0)return '¥0';
+  if(n>=10000)return '¥'+Math.round(n/10000)+'万';
+  return '¥'+n.toLocaleString();
+}
+
+function calcFee(candidate){
+  const agency=getAgency(candidate.agencyId);
+  if(!agency)return 0;
+  if(agency.feeType==='fixed'){
+    return candidate.employType==='parttime'?agency.feeFixed.parttime:agency.feeFixed.fulltime;
+  }
+  if(agency.feeType==='percent'){
+    const fee=Math.round((candidate.salary||0)*(agency.feePercent/100));
+    return agency.feeMin?Math.max(fee,agency.feeMin):fee;
+  }
+  if(agency.feeType==='success')return Math.round((candidate.salary||0)*0.2);
+  return 0;
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function jobBadge(jtId){
+  const jt=getJobType(jtId);
+  if(!jt)return '';
+  return `<span class="badge ${jt.badgeClass}">${jt.name}</span>`;
+}
+
+function stageBadge(stId){
+  const st=getStage(stId);
+  if(!st)return '';
+  return `<span class="badge badge-stage" style="background:${st.color}">${st.name}</span>`;
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+let currentPage='pipeline';
+let currentFilter='all';
+
+function showPage(page){
+  currentPage=page;
+  document.querySelectorAll('.sidebar nav a').forEach(a=>{
+    a.classList.toggle('active',a.dataset.page===page);
+  });
+  const titles={pipeline:'パイプライン',candidates:'候補者一覧',agencies:'紹介会社管理',costs:'コスト分析',templates:'テンプレート',settings:'設定'};
+  document.getElementById('pageTitle').textContent=titles[page]||page;
+  document.getElementById('sidebar').classList.remove('open');
+  render();
+}
+
+function render(){
+  const c=document.getElementById('content');
+  const ta=document.getElementById('topbarActions');
+  ta.innerHTML='';
+  switch(currentPage){
+    case 'pipeline':renderPipeline(c,ta);break;
+    case 'candidates':renderCandidates(c,ta);break;
+    case 'agencies':renderAgencies(c,ta);break;
+    case 'costs':renderCosts(c,ta);break;
+    case 'templates':renderTemplates(c,ta);break;
+    case 'settings':renderSettings(c,ta);break;
+  }
+}
+
+// ============================================================
+// 1. PIPELINE
+// ============================================================
+function renderPipeline(container,topbar){
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ 候補者を追加</button>`;
+
+  const filtered=currentFilter==='all'?data.candidates:data.candidates.filter(c=>c.jobType===currentFilter);
+
+  let html=`<div class="filter-bar">
+    <span style="font-size:12px;color:var(--dim);margin-right:4px">職種:</span>
+    <button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="currentFilter='all';render()">全職種</button>`;
+  data.jobTypes.forEach(jt=>{
+    html+=`<button class="filter-btn ${currentFilter===jt.id?'active':''}" onclick="currentFilter='${jt.id}';render()">${jt.name}</button>`;
+  });
+  html+=`</div><div class="kanban">`;
+
+  data.stages.forEach(st=>{
+    const cards=filtered.filter(c=>c.stage===st.id);
+    html+=`<div class="kanban-col">
+      <div class="kanban-col-header" style="background:${st.color}">
+        <span>${st.name}</span><span class="kanban-count">${cards.length}</span>
+      </div>
+      <div class="kanban-col-body">`;
+    cards.forEach(c=>{
+      const agency=getAgency(c.agencyId);
+      const days=daysBetween(c.stageDate);
+      const fee=calcFee(c);
+      html+=`<div class="kanban-card" onclick="openCandidateDetail('${c.id}')">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          ${jobBadge(c.jobType)}
+          <span class="card-name">${c.name}</span>
+        </div>
+        <div class="card-meta">
+          <span>${agency?agency.name:'直接応募'}</span>
+          <span>経験${c.expYears}年</span>
+        </div>
+        ${fee?`<div class="card-fee">紹介料: ${formatYen(fee)}</div>`:''}
+        <div class="card-days">${st.id==='hired'?'入職済み':st.id==='rejected'?'見送り':days+'日経過'}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  html+=`</div>`;
+  container.innerHTML=html;
+}
+
+// ============================================================
+// 2. CANDIDATES
+// ============================================================
+let candidateSort={col:'lastAction',asc:false};
+
+function renderCandidates(container,topbar){
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddCandidate()">+ 候補者を追加</button>`;
+
+  const sorted=[...data.candidates].sort((a,b)=>{
+    let va=a[candidateSort.col],vb=b[candidateSort.col];
+    if(typeof va==='number'&&typeof vb==='number')return candidateSort.asc?va-vb:vb-va;
+    va=String(va||'');vb=String(vb||'');
+    return candidateSort.asc?va.localeCompare(vb):vb.localeCompare(va);
+  });
+
+  function sortIcon(col){return candidateSort.col===col?(candidateSort.asc?' ↑':' ↓'):'';}
+
+  let html=`<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr>
+      <th onclick="toggleCandidateSort('name')">氏名${sortIcon('name')}</th>
+      <th onclick="toggleCandidateSort('jobType')">職種${sortIcon('jobType')}</th>
+      <th onclick="toggleCandidateSort('expYears')">経験年数${sortIcon('expYears')}</th>
+      <th onclick="toggleCandidateSort('agencyId')">紹介元${sortIcon('agencyId')}</th>
+      <th onclick="toggleCandidateSort('stage')">ステータス${sortIcon('stage')}</th>
+      <th onclick="toggleCandidateSort('firstContact')">初回接触${sortIcon('firstContact')}</th>
+      <th onclick="toggleCandidateSort('lastAction')">最終更新${sortIcon('lastAction')}</th>
+      <th onclick="toggleCandidateSort('assignee')">担当${sortIcon('assignee')}</th>
+      <th>紹介料</th>
+    </tr></thead><tbody>`;
+
+  sorted.forEach(c=>{
+    const agency=getAgency(c.agencyId);
+    html+=`<tr onclick="openCandidateDetail('${c.id}')">
+      <td style="font-weight:600">${c.name}</td>
+      <td>${jobBadge(c.jobType)}</td>
+      <td>${c.expYears}年</td>
+      <td>${agency?agency.name:'直接応募'}</td>
+      <td>${stageBadge(c.stage)}</td>
+      <td>${c.firstContact||'-'}</td>
+      <td>${c.lastAction||'-'}</td>
+      <td>${c.assignee||'-'}</td>
+      <td style="font-weight:500">${formatYen(calcFee(c))}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  container.innerHTML=html;
+}
+
+function toggleCandidateSort(col){
+  if(candidateSort.col===col)candidateSort.asc=!candidateSort.asc;
+  else{candidateSort.col=col;candidateSort.asc=true;}
+  render();
+}
+
+// ============================================================
+// 3. AGENCIES
+// ============================================================
+function renderAgencies(container,topbar){
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddAgency()">+ 紹介会社を追加</button>`;
+
+  const postingLabel={active:'掲載中',inactive:'未掲載',inprogress:'対応中'};
+  const postingClass={active:'active',inactive:'inactive',inprogress:'inprogress'};
+  const typeLabel={posting:'求人掲載型',agent:'エージェント型'};
+
+  let html=`<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr>
+      <th>会社名</th><th>種別</th><th>PT常勤</th><th>PT非常勤</th><th>放技</th><th>事務</th>
+      <th>手数料</th><th>紹介中</th><th>最終連絡</th><th>備考</th>
+    </tr></thead><tbody>`;
+
+  data.agencies.forEach(a=>{
+    const activeCount=data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected'&&c.stage!=='hired').length;
+    let feeStr='';
+    if(a.feeType==='fixed')feeStr=`常勤${formatYen(a.feeFixed.fulltime)} / 非常勤${formatYen(a.feeFixed.parttime)}`;
+    else if(a.feeType==='percent')feeStr=`年収${a.feePercent}%`+(a.feeMin?` (min ${formatYen(a.feeMin)})`:'');
+    else if(a.feeType==='success')feeStr='成功報酬型';
+    else if(a.feeType==='click')feeStr='クリック課金';
+
+    const postingKeys=['pt_full','pt_part','rt','office'];
+    html+=`<tr>
+      <td><strong>${a.name}</strong><br><span style="font-size:11px;color:var(--dim)">${a.company}</span></td>
+      <td><span style="font-size:12px">${typeLabel[a.type]||a.type}</span></td>`;
+    postingKeys.forEach(pk=>{
+      const st=a.postings[pk]||'inactive';
+      html+=`<td><span class="posting-status ${postingClass[st]}" onclick="event.stopPropagation();togglePosting('${a.id}','${pk}')">${postingLabel[st]}</span></td>`;
+    });
+    html+=`<td style="font-size:12px">${feeStr}</td>
+      <td style="text-align:center;font-weight:600">${activeCount}</td>
+      <td>${a.lastContact||'-'}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.notes||''}">${a.notes||'-'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  container.innerHTML=html;
+}
+
+function togglePosting(agencyId,postingKey){
+  const a=data.agencies.find(x=>x.id===agencyId);
+  if(!a)return;
+  const cycle=['inactive','inprogress','active'];
+  const cur=a.postings[postingKey]||'inactive';
+  const idx=cycle.indexOf(cur);
+  a.postings[postingKey]=cycle[(idx+1)%cycle.length];
+  saveData();
+  render();
+  toast('掲載ステータスを更新しました');
+}
+
+// ============================================================
+// 4. COST ANALYSIS
+// ============================================================
+function renderCosts(container){
+  const activeCandidates=data.candidates.filter(c=>c.stage!=='rejected');
+  const offerOrHired=data.candidates.filter(c=>c.stage==='offer'||c.stage==='hired');
+
+  const totalEstCost=offerOrHired.reduce((s,c)=>s+calcFee(c),0);
+  const hiredCount=data.candidates.filter(c=>c.stage==='hired').length;
+  const avgCostPerHire=hiredCount?Math.round(data.candidates.filter(c=>c.stage==='hired').reduce((s,c)=>s+calcFee(c),0)/hiredCount):0;
+  const pipelineTotal=activeCandidates.filter(c=>c.stage!=='hired').reduce((s,c)=>s+calcFee(c),0);
+
+  let html=`<div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">内定・入職の想定コスト合計</div>
+      <div class="stat-value" style="color:var(--primary)">${formatYen(totalEstCost)}</div>
+      <div class="stat-sub">${offerOrHired.length}名分</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">採用単価（入職済み平均）</div>
+      <div class="stat-value">${formatYen(avgCostPerHire)}</div>
+      <div class="stat-sub">${hiredCount}名入職</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">パイプライン内の想定コスト</div>
+      <div class="stat-value">${formatYen(pipelineTotal)}</div>
+      <div class="stat-sub">選考中候補者 ${activeCandidates.filter(c=>c.stage!=='hired').length}名分</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">月間採用予算</div>
+      <div class="stat-value">${formatYen(data.settings.monthlyBudget)}</div>
+      <div class="stat-sub">残り: ${formatYen(Math.max(0,data.settings.monthlyBudget-totalEstCost))}</div>
+    </div>
+  </div>`;
+
+  // Cost per hire by job type
+  html+=`<div class="chart-container"><h4>職種別 採用コスト</h4><div class="bar-chart">`;
+  data.jobTypes.forEach(jt=>{
+    const cs=data.candidates.filter(c=>c.jobType===jt.id&&(c.stage==='offer'||c.stage==='hired'));
+    const total=cs.reduce((s,c)=>s+calcFee(c),0);
+    const maxVal=3000000;
+    const pct=Math.min(100,Math.round(total/maxVal*100));
+    html+=`<div class="bar-row">
+      <span class="bar-label">${jt.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,5)}%;background:${jt.color}">${cs.length}名</div></div>
+      <span class="bar-value">${formatYen(total)}</span>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  // Agency comparison
+  html+=`<div class="chart-container"><h4>紹介会社別 候補者数・コスト比較</h4><div class="bar-chart">`;
+  const maxAgencyCost=Math.max(...data.agencies.map(a=>{
+    return data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected').reduce((s,c)=>s+calcFee(c),0);
+  }),1);
+  data.agencies.forEach(a=>{
+    const cs=data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected');
+    const total=cs.reduce((s,c)=>s+calcFee(c),0);
+    const pct=Math.round(total/maxAgencyCost*100);
+    html+=`<div class="bar-row">
+      <span class="bar-label">${a.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)">${cs.length}名</div></div>
+      <span class="bar-value">${formatYen(total)}</span>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  // Breakdown table
+  html+=`<div class="chart-container"><h4>紹介会社別 詳細内訳</h4>
+    <table class="data-table"><thead><tr><th>紹介会社</th><th>候補者数</th><th>選考中</th><th>内定</th><th>入職</th><th>見送り</th><th>想定コスト</th></tr></thead><tbody>`;
+  data.agencies.forEach(a=>{
+    const cs=data.candidates.filter(c=>c.agencyId===a.id);
+    const screening=cs.filter(c=>['screening','interview1','interview2'].includes(c.stage)).length;
+    const offer=cs.filter(c=>c.stage==='offer').length;
+    const hired=cs.filter(c=>c.stage==='hired').length;
+    const rejected=cs.filter(c=>c.stage==='rejected').length;
+    const cost=cs.filter(c=>c.stage==='offer'||c.stage==='hired').reduce((s,c)=>s+calcFee(c),0);
+    html+=`<tr style="cursor:default"><td>${a.name}</td><td>${cs.length}</td><td>${screening}</td><td>${offer}</td><td>${hired}</td><td>${rejected}</td><td style="font-weight:600">${formatYen(cost)}</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
+  container.innerHTML=html;
+}
+
+// ============================================================
+// 5. TEMPLATES
+// ============================================================
+function renderTemplates(container,topbar){
+  topbar.innerHTML=`<button class="btn btn-primary" onclick="openAddTemplate()">+ テンプレートを追加</button>`;
+  let html='';
+  data.templates.forEach(t=>{
+    html+=`<div class="template-card">
+      <h4>${t.title} <span style="display:flex;gap:4px"><button class="btn btn-sm" onclick="copyTemplate('${t.id}')">コピー</button><button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">削除</button></span></h4>
+      <textarea id="tpl_${t.id}" oninput="updateTemplate('${t.id}',this.value)">${t.content}</textarea>
+    </div>`;
+  });
+  container.innerHTML=html;
+}
+
+function updateTemplate(id,val){
+  const t=data.templates.find(x=>x.id===id);
+  if(t){t.content=val;saveData();}
+}
+
+function copyTemplate(id){
+  const t=data.templates.find(x=>x.id===id);
+  if(t){navigator.clipboard.writeText(t.content).then(()=>toast('クリップボードにコピーしました'));}
+}
+
+function deleteTemplate(id){
+  if(!confirm('このテンプレートを削除しますか？'))return;
+  data.templates=data.templates.filter(t=>t.id!==id);
+  saveData();render();toast('テンプレートを削除しました');
+}
+
+function openAddTemplate(){
+  openModal('テンプレートを追加',`
+    <div class="form-group"><label>タイトル</label><input id="newTplTitle" placeholder="テンプレート名"></div>
+    <div class="form-group"><label>内容</label><textarea id="newTplContent" style="min-height:200px" placeholder="テンプレート内容を入力..."></textarea></div>
+  `,`<button class="btn" onclick="closeModal()">キャンセル</button><button class="btn btn-primary" onclick="saveNewTemplate()">追加</button>`);
+}
+
+function saveNewTemplate(){
+  const title=document.getElementById('newTplTitle').value.trim();
+  const content=document.getElementById('newTplContent').value.trim();
+  if(!title){toast('タイトルを入力してください');return;}
+  data.templates.push({id:genId(),title,content});
+  saveData();closeModal();render();toast('テンプレートを追加しました');
+}
+
+// ============================================================
+// 6. SETTINGS
+// ============================================================
+function renderSettings(container){
+  let html=`
+  <div class="settings-section">
+    <h4>職種管理</h4>
+    <div style="margin-bottom:8px">`;
+  data.jobTypes.forEach(jt=>{
+    html+=`<span class="tag" style="border-left:3px solid ${jt.color}">${jt.name} <span class="remove" onclick="removeJobType('${jt.id}')">&times;</span></span>`;
+  });
+  html+=`</div>
+    <div style="display:flex;gap:8px"><input id="newJobType" placeholder="新しい職種名" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+    <input id="newJobTypeColor" type="color" value="#6366f1" style="width:40px;height:34px;border:none;cursor:pointer">
+    <button class="btn btn-sm" onclick="addJobType()">追加</button></div>
+  </div>
+
+  <div class="settings-section">
+    <h4>パイプラインステージ</h4>
+    <div style="margin-bottom:8px">`;
+  data.stages.forEach(st=>{
+    html+=`<span class="tag" style="border-left:3px solid ${st.color}">${st.name}</span>`;
+  });
+  html+=`</div>
+    <p style="font-size:12px;color:var(--dim)">ステージの追加・削除は候補者データに影響するため、慎重に行ってください。</p>
+  </div>
+
+  <div class="settings-section">
+    <h4>予算設定</h4>
+    <div class="form-group">
+      <label>月間採用予算 (円)</label>
+      <input type="number" id="monthlyBudget" value="${data.settings.monthlyBudget}" onchange="data.settings.monthlyBudget=Number(this.value);saveData();toast('予算を更新しました')">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h4>データ管理</h4>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="exportData()">データをエクスポート (JSON)</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">データをインポート</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-danger" onclick="resetData()">データをリセット</button>
+    </div>
+  </div>`;
+  container.innerHTML=html;
+}
+
+function addJobType(){
+  const name=document.getElementById('newJobType').value.trim();
+  const color=document.getElementById('newJobTypeColor').value;
+  if(!name){toast('職種名を入力してください');return;}
+  data.jobTypes.push({id:genId(),name,color,badgeClass:''});
+  saveData();render();toast('職種を追加しました');
+}
+
+function removeJobType(id){
+  if(data.candidates.some(c=>c.jobType===id)){toast('この職種の候補者がいるため削除できません');return;}
+  if(!confirm('この職種を削除しますか？'))return;
+  data.jobTypes=data.jobTypes.filter(j=>j.id!==id);
+  saveData();render();
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`hireboard_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(url);
+  toast('データをエクスポートしました');
+}
+
+function importData(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(imported.candidates&&imported.agencies){
+        data=imported;saveData();render();
+        toast('データをインポートしました');
+      }else{toast('無効なデータ形式です');}
+    }catch(err){toast('ファイルの読み込みに失敗しました');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+function resetData(){
+  if(!confirm('全てのデータを初期状態に戻しますか？この操作は元に戻せません。'))return;
+  data=getDefaultData();saveData();render();toast('データをリセットしました');
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(title,bodyHtml,footerHtml){
+  const m=document.getElementById('modal');
+  m.innerHTML=`
+    <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">${bodyHtml}</div>
+    ${footerHtml?`<div class="modal-footer">${footerHtml}</div>`:''}`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// Candidate Detail Modal
+function openCandidateDetail(id){
+  const c=data.candidates.find(x=>x.id===id);
+  if(!c)return;
+  const agency=getAgency(c.agencyId);
+  const fee=calcFee(c);
+  const days=daysBetween(c.stageDate);
+
+  let agencyOpts=`<option value="">直接応募</option>`;
+  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}" ${c.agencyId===a.id?'selected':''}>${a.name}</option>`;});
+  let stageOpts='';
+  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}" ${c.stage===s.id?'selected':''}>${s.name}</option>`;});
+  let jtOpts='';
+  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}" ${c.jobType===j.id?'selected':''}>${j.name}</option>`;});
+
+  const body=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      ${jobBadge(c.jobType)} ${stageBadge(c.stage)}
+      <span style="font-size:12px;color:var(--dim)">${c.stage==='hired'?'入職済み':c.stage==='rejected'?'見送り':days+'日経過'}</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>氏名</label><input id="cd_name" value="${c.name}"></div>
+      <div class="form-group"><label>職種</label><select id="cd_jobType">${jtOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>経験年数</label><input id="cd_exp" type="number" value="${c.expYears}"></div>
+      <div class="form-group"><label>雇用形態</label><select id="cd_employ"><option value="fulltime" ${c.employType==='fulltime'?'selected':''}>常勤</option><option value="parttime" ${c.employType==='parttime'?'selected':''}>非常勤</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>紹介元</label><select id="cd_agency">${agencyOpts}</select></div>
+      <div class="form-group"><label>ステージ</label><select id="cd_stage">${stageOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>想定年収 (円)</label><input id="cd_salary" type="number" value="${c.salary||0}"></div>
+      <div class="form-group"><label>担当者</label><input id="cd_assignee" value="${c.assignee||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>初回接触日</label><input id="cd_firstContact" type="date" value="${c.firstContact||''}"></div>
+      <div class="form-group"><label>最終更新日</label><input id="cd_lastAction" type="date" value="${c.lastAction||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>電話番号</label><input id="cd_phone" value="${c.phone||''}"></div>
+      <div class="form-group"><label>メール</label><input id="cd_email" value="${c.email||''}"></div>
+    </div>
+    <div class="form-group"><label>メモ</label><textarea id="cd_notes">${c.notes||''}</textarea></div>
+
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">紹介料情報</div>
+      <div style="font-size:13px">紹介元: <strong>${agency?agency.name:'直接応募'}</strong></div>
+      ${agency?`<div style="font-size:13px">手数料体系: ${agency.feeType==='fixed'?'固定額':agency.feeType==='percent'?'年収'+agency.feePercent+'%':agency.feeType==='success'?'成功報酬型':'クリック課金'}</div>`:''}
+      <div style="font-size:16px;font-weight:700;color:var(--primary);margin-top:4px">想定紹介料: ${formatYen(fee)}</div>
+    </div>`;
+
+  openModal('候補者詳細', body,
+    `<button class="btn btn-danger" onclick="deleteCandidate('${c.id}')">削除</button>
+     <button class="btn" onclick="closeModal()">キャンセル</button>
+     <button class="btn btn-primary" onclick="saveCandidateDetail('${c.id}')">保存</button>`);
+}
+
+function saveCandidateDetail(id){
+  const c=data.candidates.find(x=>x.id===id);
+  if(!c)return;
+  const oldStage=c.stage;
+  c.name=document.getElementById('cd_name').value.trim();
+  c.jobType=document.getElementById('cd_jobType').value;
+  c.expYears=Number(document.getElementById('cd_exp').value);
+  c.employType=document.getElementById('cd_employ').value;
+  c.agencyId=document.getElementById('cd_agency').value;
+  c.stage=document.getElementById('cd_stage').value;
+  c.salary=Number(document.getElementById('cd_salary').value);
+  c.assignee=document.getElementById('cd_assignee').value.trim();
+  c.firstContact=document.getElementById('cd_firstContact').value;
+  c.lastAction=document.getElementById('cd_lastAction').value;
+  c.phone=document.getElementById('cd_phone').value.trim();
+  c.email=document.getElementById('cd_email').value.trim();
+  c.notes=document.getElementById('cd_notes').value;
+  if(c.stage!==oldStage)c.stageDate=new Date().toISOString().slice(0,10);
+  saveData();closeModal();render();toast('候補者情報を更新しました');
+}
+
+function deleteCandidate(id){
+  if(!confirm('この候補者を削除しますか？'))return;
+  data.candidates=data.candidates.filter(c=>c.id!==id);
+  saveData();closeModal();render();toast('候補者を削除しました');
+}
+
+// Add Candidate Modal
+function openAddCandidate(){
+  let agencyOpts=`<option value="">直接応募</option>`;
+  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}">${a.name}</option>`;});
+  let stageOpts='';
+  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}">${s.name}</option>`;});
+  let jtOpts='';
+  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}">${j.name}</option>`;});
+
+  const body=`
+    <div class="form-row">
+      <div class="form-group"><label>氏名 *</label><input id="nc_name" placeholder="山田 太郎"></div>
+      <div class="form-group"><label>職種 *</label><select id="nc_jobType">${jtOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>経験年数</label><input id="nc_exp" type="number" value="0" min="0"></div>
+      <div class="form-group"><label>雇用形態</label><select id="nc_employ"><option value="fulltime">常勤</option><option value="parttime">非常勤</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>紹介元</label><select id="nc_agency">${agencyOpts}</select></div>
+      <div class="form-group"><label>ステージ</label><select id="nc_stage">${stageOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>想定年収 (円)</label><input id="nc_salary" type="number" value="0"></div>
+      <div class="form-group"><label>担当者</label><input id="nc_assignee" placeholder="担当者名"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>電話番号</label><input id="nc_phone"></div>
+      <div class="form-group"><label>メール</label><input id="nc_email" type="email"></div>
+    </div>
+    <div class="form-group"><label>メモ</label><textarea id="nc_notes"></textarea></div>`;
+
+  openModal('候補者を追加', body,
+    `<button class="btn" onclick="closeModal()">キャンセル</button>
+     <button class="btn btn-primary" onclick="saveNewCandidate()">追加</button>`);
+}
+
+function saveNewCandidate(){
+  const name=document.getElementById('nc_name').value.trim();
+  if(!name){toast('氏名を入力してください');return;}
+  const today=new Date().toISOString().slice(0,10);
+  data.candidates.push({
+    id:genId(),
+    name,
+    jobType:document.getElementById('nc_jobType').value,
+    expYears:Number(document.getElementById('nc_exp').value),
+    agencyId:document.getElementById('nc_agency').value,
+    stage:document.getElementById('nc_stage').value,
+    salary:Number(document.getElementById('nc_salary').value),
+    employType:document.getElementById('nc_employ').value,
+    firstContact:today,
+    lastAction:today,
+    stageDate:today,
+    assignee:document.getElementById('nc_assignee').value.trim(),
+    notes:document.getElementById('nc_notes').value,
+    phone:document.getElementById('nc_phone').value.trim(),
+    email:document.getElementById('nc_email').value.trim()
+  });
+  saveData();closeModal();render();toast('候補者を追加しました');
+}
+
+// Add Agency Modal
+function openAddAgency(){
+  const body=`
+    <div class="form-row">
+      <div class="form-group"><label>サービス名 *</label><input id="na_name" placeholder="サービス名"></div>
+      <div class="form-group"><label>会社名 *</label><input id="na_company" placeholder="運営会社名"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>種別</label><select id="na_type"><option value="posting">求人掲載型</option><option value="agent">エージェント型</option></select></div>
+      <div class="form-group"><label>手数料タイプ</label><select id="na_feeType" onchange="toggleAgencyFeeFields()"><option value="fixed">固定額</option><option value="percent">年収パーセント</option><option value="success">成功報酬型</option><option value="click">クリック課金</option></select></div>
+    </div>
+    <div id="feeFieldsFixed">
+      <div class="form-row">
+        <div class="form-group"><label>常勤紹介料 (円)</label><input id="na_feeFull" type="number" value="0"></div>
+        <div class="form-group"><label>非常勤紹介料 (円)</label><input id="na_feePart" type="number" value="0"></div>
+      </div>
+    </div>
+    <div id="feeFieldsPercent" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>パーセント (%)</label><input id="na_feePct" type="number" value="30"></div>
+        <div class="form-group"><label>最低紹介料 (円)</label><input id="na_feeMin" type="number" value="0"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>備考</label><textarea id="na_notes"></textarea></div>`;
+
+  openModal('紹介会社を追加', body,
+    `<button class="btn" onclick="closeModal()">キャンセル</button>
+     <button class="btn btn-primary" onclick="saveNewAgency()">追加</button>`);
+}
+
+function toggleAgencyFeeFields(){
+  const ft=document.getElementById('na_feeType').value;
+  document.getElementById('feeFieldsFixed').style.display=ft==='fixed'?'':'none';
+  document.getElementById('feeFieldsPercent').style.display=ft==='percent'?'':'none';
+}
+
+function saveNewAgency(){
+  const name=document.getElementById('na_name').value.trim();
+  const company=document.getElementById('na_company').value.trim();
+  if(!name||!company){toast('サービス名と会社名を入力してください');return;}
+  const feeType=document.getElementById('na_feeType').value;
+  data.agencies.push({
+    id:genId(),name,company,
+    type:document.getElementById('na_type').value,
+    feeType,
+    feeFixed:{fulltime:Number(document.getElementById('na_feeFull').value),parttime:Number(document.getElementById('na_feePart').value)},
+    feePercent:Number(document.getElementById('na_feePct')?.value||0),
+    feeMin:Number(document.getElementById('na_feeMin')?.value||0),
+    postings:{pt_full:'inactive',pt_part:'inactive',rt:'inactive',office:'inactive'},
+    lastContact:new Date().toISOString().slice(0,10),
+    notes:document.getElementById('na_notes').value
+  });
+  saveData();closeModal();render();toast('紹介会社を追加しました');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+showPage('pipeline');
+
+// Keyboard shortcut: Escape to close modal
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+</script>
+</body>
+</html>
