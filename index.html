@@ -579,10 +579,48 @@ function getDefaultData(){
   };
 }
 
+// 画面に出す前のエスケープ。氏名・メモ・紹介会社名など、利用者が入れた値と読み込んだ JSON の値は必ずここを通す
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"'`]/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[ch];
+  });
+}
+function safeId(v){return String(v==null?'':v).replace(/[^A-Za-z0-9_-]/g,'').slice(0,64)}
+function safeColor(v){return /^#[0-9a-fA-F]{3,8}$/.test(v)?v:'#6E6E78'}
+function safeNum(v){const n=Number(v);return isFinite(n)?n:0}
+
+// 保存データ・読み込んだ JSON の形を整える。id は onclick に、色は style に入るので、使える文字を絞る
+function sanitizeData(d){
+  const def=getDefaultData();
+  if(!d||typeof d!=='object')return def;
+  const list=function(v,fb){return Array.isArray(v)?v.filter(function(x){return x&&typeof x==='object'}):fb};
+  d.stages=list(d.stages,def.stages);
+  d.jobTypes=list(d.jobTypes,def.jobTypes);
+  d.agencies=list(d.agencies,def.agencies);
+  d.candidates=list(d.candidates,def.candidates);
+  d.templates=list(d.templates,def.templates);
+  d.stages.forEach(function(s){s.id=safeId(s.id);s.color=safeColor(s.color)});
+  d.jobTypes.forEach(function(j){j.id=safeId(j.id);j.color=safeColor(j.color);j.badgeClass=safeId(j.badgeClass)});
+  d.agencies.forEach(function(a){
+    a.id=safeId(a.id);a.feePercent=safeNum(a.feePercent);a.feeMin=safeNum(a.feeMin);
+    if(!a.feeFixed||typeof a.feeFixed!=='object')a.feeFixed={};
+    a.feeFixed.fulltime=safeNum(a.feeFixed.fulltime);a.feeFixed.parttime=safeNum(a.feeFixed.parttime);
+    if(!a.postings||typeof a.postings!=='object')a.postings={};
+  });
+  d.candidates.forEach(function(c){
+    c.id=safeId(c.id);c.jobType=safeId(c.jobType);c.agencyId=safeId(c.agencyId);c.stage=safeId(c.stage);
+    c.expYears=safeNum(c.expYears);c.salary=safeNum(c.salary);
+  });
+  d.templates.forEach(function(t){t.id=safeId(t.id)});
+  if(!d.settings||typeof d.settings!=='object')d.settings={};
+  d.settings.monthlyBudget=safeNum(d.settings.monthlyBudget);
+  return d;
+}
+
 function loadData(){
   try{
     const d = localStorage.getItem(STORAGE_KEY);
-    if(d) return JSON.parse(d);
+    if(d) return sanitizeData(JSON.parse(d));
   }catch(e){}
   return getDefaultData();
 }
@@ -608,7 +646,8 @@ function daysBetween(d1,d2){
 }
 
 function formatYen(n){
-  if(!n||n===0)return '\u00a50';
+  n=Number(n);
+  if(!isFinite(n)||!n)return '\u00a50';
   if(n>=10000)return '\u00a5'+Math.round(n/10000)+'\u4e07';
   return '\u00a5'+n.toLocaleString();
 }
@@ -643,7 +682,7 @@ function toast(msg){
 function jobBadge(jtId){
   const jt=getJobType(jtId);
   if(!jt)return '';
-  return `<span class="badge ${jt.badgeClass}">${jt.name}</span>`;
+  return `<span class="badge ${jt.badgeClass}">${esc(jt.name)}</span>`;
 }
 
 function employBadge(et){
@@ -654,7 +693,7 @@ function employBadge(et){
 function stageBadge(stId){
   const st=getStage(stId);
   if(!st)return '';
-  return `<span class="badge badge-stage" style="background:${st.color}">${st.name}</span>`;
+  return `<span class="badge badge-stage" style="background:${st.color}">${esc(st.name)}</span>`;
 }
 
 // ============================================================
@@ -707,7 +746,7 @@ function renderFilterBar(){
     <span style="font-size:12px;color:var(--dim);margin-right:4px">\u8077\u7A2E:</span>
     <button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="currentFilter='all';render()">\u5168\u8077\u7A2E</button>`;
   data.jobTypes.forEach(jt=>{
-    html+=`<button class="filter-btn ${currentFilter===jt.id?'active':''}" onclick="currentFilter='${jt.id}';render()">${jt.name}</button>`;
+    html+=`<button class="filter-btn ${currentFilter===jt.id?'active':''}" onclick="currentFilter='${jt.id}';render()">${esc(jt.name)}</button>`;
   });
   html+=`<span style="font-size:12px;color:var(--dim);margin-left:12px;margin-right:4px">\u96C7\u7528:</span>
     <button class="filter-btn ${currentEmployFilter==='all'?'active':''}" onclick="currentEmployFilter='all';render()">\u5168\u3066</button>
@@ -732,7 +771,7 @@ function renderPipeline(container,topbar){
     const cards=filtered.filter(c=>c.stage===st.id);
     html+=`<div class="kanban-col">
       <div class="kanban-col-header" style="background:${st.color}">
-        <span>${st.name}</span><span class="kanban-count">${cards.length}</span>
+        <span>${esc(st.name)}</span><span class="kanban-count">${cards.length}</span>
       </div>
       <div class="kanban-col-body">`;
     cards.forEach(c=>{
@@ -743,11 +782,11 @@ function renderPipeline(container,topbar){
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px">
           ${jobBadge(c.jobType)}
           ${employBadge(c.employType)}
-          <span class="card-name">${c.name}</span>
+          <span class="card-name">${esc(c.name)}</span>
         </div>
         <div class="card-meta">
-          <span>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</span>
-          <span>\u7D4C\u9A13${c.expYears}\u5E74</span>
+          <span>${agency?esc(agency.name):'\u76F4\u63A5\u5FDC\u52DF'}</span>
+          <span>\u7D4C\u9A13${esc(c.expYears)}\u5E74</span>
         </div>
         ${fee?`<div class="card-fee">\u7D39\u4ECB\u6599: ${formatYen(fee)}</div>`:''}
         <div class="card-days">${st.id==='hired'?'\u5165\u8077\u6E08\u307F':st.id==='rejected'?'\u898B\u9001\u308A':days+'\u65E5\u7D4C\u904E'}</div>
@@ -795,15 +834,15 @@ function renderCandidates(container,topbar){
   sorted.forEach(c=>{
     const agency=getAgency(c.agencyId);
     html+=`<tr onclick="openCandidateDetail('${c.id}')">
-      <td style="font-weight:600">${c.name}</td>
+      <td style="font-weight:600">${esc(c.name)}</td>
       <td>${jobBadge(c.jobType)}</td>
       <td>${employBadge(c.employType)}</td>
-      <td>${c.expYears}\u5E74</td>
-      <td>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</td>
+      <td>${esc(c.expYears)}\u5E74</td>
+      <td>${agency?esc(agency.name):'\u76F4\u63A5\u5FDC\u52DF'}</td>
       <td>${stageBadge(c.stage)}</td>
-      <td>${c.firstContact||'-'}</td>
-      <td>${c.lastAction||'-'}</td>
-      <td>${c.assignee||'-'}</td>
+      <td>${esc(c.firstContact||'-')}</td>
+      <td>${esc(c.lastAction||'-')}</td>
+      <td>${esc(c.assignee||'-')}</td>
       <td style="font-weight:500">${formatYen(calcFee(c))}</td>
     </tr>`;
   });
@@ -831,7 +870,7 @@ function renderAgencies(container,topbar){
     <thead><tr>
       <th>\u4F1A\u793E\u540D</th><th>\u7A2E\u5225</th>`;
   POSTING_KEYS.forEach(pk=>{
-    html+=`<th style="font-size:11px;text-align:center">${pk.label}</th>`;
+    html+=`<th style="font-size:11px;text-align:center">${esc(pk.label)}</th>`;
   });
   html+=`<th>\u624B\u6570\u6599</th><th>\u7D39\u4ECB\u4E2D</th><th>\u6700\u7D42\u9023\u7D61</th><th>\u5099\u8003</th>
     </tr></thead><tbody>`;
@@ -840,21 +879,21 @@ function renderAgencies(container,topbar){
     const activeCount=data.candidates.filter(c=>c.agencyId===a.id&&c.stage!=='rejected'&&c.stage!=='hired').length;
     let feeStr='';
     if(a.feeType==='fixed')feeStr=`\u5E38\u52E4${formatYen(a.feeFixed.fulltime)} / \u975E\u5E38\u52E4${formatYen(a.feeFixed.parttime)}`;
-    else if(a.feeType==='percent')feeStr=`\u5E74\u53CE${a.feePercent}%`+(a.feeMin?` (min ${formatYen(a.feeMin)})`:'');
+    else if(a.feeType==='percent')feeStr=`\u5E74\u53CE${esc(a.feePercent)}%`+(a.feeMin?` (min ${formatYen(a.feeMin)})`:'');
     else if(a.feeType==='success')feeStr='\u6210\u529F\u5831\u916C\u578B';
     else if(a.feeType==='click')feeStr='\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1';
 
     html+=`<tr>
-      <td><strong>${a.name}</strong><br><span style="font-size:11px;color:var(--dim)">${a.company}</span></td>
-      <td><span style="font-size:12px">${typeLabel[a.type]||a.type}</span></td>`;
+      <td><strong>${esc(a.name)}</strong><br><span style="font-size:11px;color:var(--dim)">${esc(a.company)}</span></td>
+      <td><span style="font-size:12px">${esc(typeLabel[a.type]||a.type)}</span></td>`;
     POSTING_KEYS.forEach(pk=>{
       const st=a.postings[pk.key]||'inactive';
       html+=`<td style="text-align:center"><span class="posting-status ${postingClass[st]}" onclick="event.stopPropagation();togglePosting('${a.id}','${pk.key}')">${postingLabel[st]}</span></td>`;
     });
     html+=`<td style="font-size:12px">${feeStr}</td>
       <td style="text-align:center;font-weight:600">${activeCount}</td>
-      <td>${a.lastContact||'-'}</td>
-      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.notes||''}">${a.notes||'-'}</td>
+      <td>${esc(a.lastContact||'-')}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.notes||'')}">${esc(a.notes||'-')}</td>
     </tr>`;
   });
   html+=`</tbody></table></div>`;
@@ -917,7 +956,7 @@ function renderCosts(container){
       const maxVal=3000000;
       const pct=Math.min(100,Math.round(total/maxVal*100));
       html+=`<div class="bar-row">
-        <span class="bar-label">${label}</span>
+        <span class="bar-label">${esc(label)}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:${jt.color}${et==='parttime'?'99':''}">${cs.length}\u540D</div></div>
         <span class="bar-value">${formatYen(total)}</span>
       </div>`;
@@ -935,7 +974,7 @@ function renderCosts(container){
     const total=cs.reduce((s,c)=>s+calcFee(c),0);
     const pct=Math.round(total/maxAgencyCost*100);
     html+=`<div class="bar-row">
-      <span class="bar-label">${a.name}</span>
+      <span class="bar-label">${esc(a.name)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)">${cs.length}\u540D</div></div>
       <span class="bar-value">${formatYen(total)}</span>
     </div>`;
@@ -970,7 +1009,7 @@ function renderCosts(container){
     const hired=cs.filter(c=>c.stage==='hired').length;
     const rejected=cs.filter(c=>c.stage==='rejected').length;
     const cost=cs.filter(c=>c.stage==='offer'||c.stage==='hired').reduce((s,c)=>s+calcFee(c),0);
-    html+=`<tr style="cursor:default"><td>${a.name}</td><td>${cs.length}</td><td>${screening}</td><td>${offer}</td><td>${hired}</td><td>${rejected}</td><td style="font-weight:600">${formatYen(cost)}</td></tr>`;
+    html+=`<tr style="cursor:default"><td>${esc(a.name)}</td><td>${cs.length}</td><td>${screening}</td><td>${offer}</td><td>${hired}</td><td>${rejected}</td><td style="font-weight:600">${formatYen(cost)}</td></tr>`;
   });
   html+=`</tbody></table></div>`;
 
@@ -985,8 +1024,8 @@ function renderTemplates(container,topbar){
   let html='';
   data.templates.forEach(t=>{
     html+=`<div class="template-card">
-      <h4>${t.title} <span style="display:flex;gap:4px"><button class="btn btn-sm" onclick="copyTemplate('${t.id}')">\u30B3\u30D4\u30FC</button><button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">\u524A\u9664</button></span></h4>
-      <textarea id="tpl_${t.id}" oninput="updateTemplate('${t.id}',this.value)">${t.content}</textarea>
+      <h4>${esc(t.title)} <span style="display:flex;gap:4px"><button class="btn btn-sm" onclick="copyTemplate('${t.id}')">\u30B3\u30D4\u30FC</button><button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">\u524A\u9664</button></span></h4>
+      <textarea id="tpl_${t.id}" oninput="updateTemplate('${t.id}',this.value)">${esc(t.content)}</textarea>
     </div>`;
   });
   container.innerHTML=html;
@@ -1032,7 +1071,7 @@ function renderSettings(container){
     <h4>\u8077\u7A2E\u7BA1\u7406</h4>
     <div style="margin-bottom:8px">`;
   data.jobTypes.forEach(jt=>{
-    html+=`<span class="tag" style="border-left:3px solid ${jt.color}">${jt.name} <span class="remove" onclick="removeJobType('${jt.id}')">&times;</span></span>`;
+    html+=`<span class="tag" style="border-left:3px solid ${jt.color}">${esc(jt.name)} <span class="remove" onclick="removeJobType('${jt.id}')">&times;</span></span>`;
   });
   html+=`</div>
     <div style="display:flex;gap:8px"><input id="newJobType" placeholder="\u65B0\u3057\u3044\u8077\u7A2E\u540D" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
@@ -1044,7 +1083,7 @@ function renderSettings(container){
     <h4>\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u30B9\u30C6\u30FC\u30B8</h4>
     <div style="margin-bottom:8px">`;
   data.stages.forEach(st=>{
-    html+=`<span class="tag" style="border-left:3px solid ${st.color}">${st.name}</span>`;
+    html+=`<span class="tag" style="border-left:3px solid ${st.color}">${esc(st.name)}</span>`;
   });
   html+=`</div>
     <p style="font-size:12px;color:var(--dim)">\u30B9\u30C6\u30FC\u30B8\u306E\u8FFD\u52A0\u30FB\u524A\u9664\u306F\u5019\u88DC\u8005\u30C7\u30FC\u30BF\u306B\u5F71\u97FF\u3059\u308B\u305F\u3081\u3001\u614E\u91CD\u306B\u884C\u3063\u3066\u304F\u3060\u3055\u3044\u3002</p>
@@ -1054,7 +1093,7 @@ function renderSettings(container){
     <h4>\u4E88\u7B97\u8A2D\u5B9A</h4>
     <div class="form-group">
       <label>\u6708\u9593\u63A1\u7528\u4E88\u7B97 (\u5186)</label>
-      <input type="number" id="monthlyBudget" value="${data.settings.monthlyBudget}" onchange="data.settings.monthlyBudget=Number(this.value);saveData();toast('\u4E88\u7B97\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F')">
+      <input type="number" id="monthlyBudget" value="${esc(data.settings.monthlyBudget)}" onchange="data.settings.monthlyBudget=Number(this.value);saveData();toast('\u4E88\u7B97\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F')">
     </div>
   </div>
 
@@ -1101,8 +1140,8 @@ function importData(event){
   reader.onload=function(e){
     try{
       const imported=JSON.parse(e.target.result);
-      if(imported.candidates&&imported.agencies){
-        data=imported;saveData();render();
+      if(imported&&Array.isArray(imported.candidates)&&Array.isArray(imported.agencies)){
+        data=sanitizeData(imported);saveData();render();
         toast('\u30C7\u30FC\u30BF\u3092\u30A4\u30F3\u30DD\u30FC\u30C8\u3057\u307E\u3057\u305F');
       }else{toast('\u7121\u52B9\u306A\u30C7\u30FC\u30BF\u5F62\u5F0F\u3067\u3059');}
     }catch(err){toast('\u30D5\u30A1\u30A4\u30EB\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F');}
@@ -1141,11 +1180,11 @@ function openCandidateDetail(id){
   const days=daysBetween(c.stageDate);
 
   let agencyOpts=`<option value="">\u76F4\u63A5\u5FDC\u52DF</option>`;
-  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}" ${c.agencyId===a.id?'selected':''}>${a.name}</option>`;});
+  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}" ${c.agencyId===a.id?'selected':''}>${esc(a.name)}</option>`;});
   let stageOpts='';
-  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}" ${c.stage===s.id?'selected':''}>${s.name}</option>`;});
+  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}" ${c.stage===s.id?'selected':''}>${esc(s.name)}</option>`;});
   let jtOpts='';
-  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}" ${c.jobType===j.id?'selected':''}>${j.name}</option>`;});
+  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}" ${c.jobType===j.id?'selected':''}>${esc(j.name)}</option>`;});
 
   const body=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
@@ -1153,11 +1192,11 @@ function openCandidateDetail(id){
       <span style="font-size:12px;color:var(--dim)">${c.stage==='hired'?'\u5165\u8077\u6E08\u307F':c.stage==='rejected'?'\u898B\u9001\u308A':days+'\u65E5\u7D4C\u904E'}</span>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>\u6C0F\u540D</label><input id="cd_name" value="${c.name}"></div>
+      <div class="form-group"><label>\u6C0F\u540D</label><input id="cd_name" value="${esc(c.name)}"></div>
       <div class="form-group"><label>\u8077\u7A2E</label><select id="cd_jobType">${jtOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>\u7D4C\u9A13\u5E74\u6570</label><input id="cd_exp" type="number" value="${c.expYears}"></div>
+      <div class="form-group"><label>\u7D4C\u9A13\u5E74\u6570</label><input id="cd_exp" type="number" value="${esc(c.expYears)}"></div>
       <div class="form-group"><label>\u96C7\u7528\u5F62\u614B</label><select id="cd_employ"><option value="fulltime" ${c.employType==='fulltime'?'selected':''}>\u5E38\u52E4</option><option value="parttime" ${c.employType==='parttime'?'selected':''}>\u975E\u5E38\u52E4</option></select></div>
     </div>
     <div class="form-row">
@@ -1165,23 +1204,23 @@ function openCandidateDetail(id){
       <div class="form-group"><label>\u30B9\u30C6\u30FC\u30B8</label><select id="cd_stage">${stageOpts}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>\u60F3\u5B9A\u5E74\u53CE (\u5186)</label><input id="cd_salary" type="number" value="${c.salary||0}"></div>
-      <div class="form-group"><label>\u62C5\u5F53\u8005</label><input id="cd_assignee" value="${c.assignee||''}"></div>
+      <div class="form-group"><label>\u60F3\u5B9A\u5E74\u53CE (\u5186)</label><input id="cd_salary" type="number" value="${esc(c.salary||0)}"></div>
+      <div class="form-group"><label>\u62C5\u5F53\u8005</label><input id="cd_assignee" value="${esc(c.assignee||'')}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>\u521D\u56DE\u63A5\u89E6\u65E5</label><input id="cd_firstContact" type="date" value="${c.firstContact||''}"></div>
-      <div class="form-group"><label>\u6700\u7D42\u66F4\u65B0\u65E5</label><input id="cd_lastAction" type="date" value="${c.lastAction||''}"></div>
+      <div class="form-group"><label>\u521D\u56DE\u63A5\u89E6\u65E5</label><input id="cd_firstContact" type="date" value="${esc(c.firstContact||'')}"></div>
+      <div class="form-group"><label>\u6700\u7D42\u66F4\u65B0\u65E5</label><input id="cd_lastAction" type="date" value="${esc(c.lastAction||'')}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>\u96FB\u8A71\u756A\u53F7</label><input id="cd_phone" value="${c.phone||''}"></div>
-      <div class="form-group"><label>\u30E1\u30FC\u30EB</label><input id="cd_email" value="${c.email||''}"></div>
+      <div class="form-group"><label>\u96FB\u8A71\u756A\u53F7</label><input id="cd_phone" value="${esc(c.phone||'')}"></div>
+      <div class="form-group"><label>\u30E1\u30FC\u30EB</label><input id="cd_email" value="${esc(c.email||'')}"></div>
     </div>
-    <div class="form-group"><label>\u30E1\u30E2</label><textarea id="cd_notes">${c.notes||''}</textarea></div>
+    <div class="form-group"><label>\u30E1\u30E2</label><textarea id="cd_notes">${esc(c.notes||'')}</textarea></div>
 
     <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px">
       <div style="font-size:12px;font-weight:600;margin-bottom:6px">\u7D39\u4ECB\u6599\u60C5\u5831</div>
-      <div style="font-size:13px">\u7D39\u4ECB\u5143: <strong>${agency?agency.name:'\u76F4\u63A5\u5FDC\u52DF'}</strong></div>
-      ${agency?`<div style="font-size:13px">\u624B\u6570\u6599\u4F53\u7CFB: ${agency.feeType==='fixed'?'\u56FA\u5B9A\u984D':agency.feeType==='percent'?'\u5E74\u53CE'+agency.feePercent+'%':agency.feeType==='success'?'\u6210\u529F\u5831\u916C\u578B':'\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1'}</div>`:''}
+      <div style="font-size:13px">\u7D39\u4ECB\u5143: <strong>${agency?esc(agency.name):'\u76F4\u63A5\u5FDC\u52DF'}</strong></div>
+      ${agency?`<div style="font-size:13px">\u624B\u6570\u6599\u4F53\u7CFB: ${agency.feeType==='fixed'?'\u56FA\u5B9A\u984D':agency.feeType==='percent'?'\u5E74\u53CE'+esc(agency.feePercent)+'%':agency.feeType==='success'?'\u6210\u529F\u5831\u916C\u578B':'\u30AF\u30EA\u30C3\u30AF\u8AB2\u91D1'}</div>`:''}
       <div style="font-size:16px;font-weight:700;color:var(--primary);margin-top:4px">\u60F3\u5B9A\u7D39\u4ECB\u6599: ${formatYen(fee)}</div>
     </div>`;
 
@@ -1221,11 +1260,11 @@ function deleteCandidate(id){
 // Add Candidate Modal
 function openAddCandidate(){
   let agencyOpts=`<option value="">\u76F4\u63A5\u5FDC\u52DF</option>`;
-  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}">${a.name}</option>`;});
+  data.agencies.forEach(a=>{agencyOpts+=`<option value="${a.id}">${esc(a.name)}</option>`;});
   let stageOpts='';
-  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}">${s.name}</option>`;});
+  data.stages.forEach(s=>{stageOpts+=`<option value="${s.id}">${esc(s.name)}</option>`;});
   let jtOpts='';
-  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}">${j.name}</option>`;});
+  data.jobTypes.forEach(j=>{jtOpts+=`<option value="${j.id}">${esc(j.name)}</option>`;});
 
   const body=`
     <div class="form-row">
